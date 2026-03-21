@@ -1,0 +1,28 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Backend (FastAPI)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/Code/backend/main.py",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/Code/backend",
+      "python": "${workspaceFolder}/Code/backend/.venv/Scripts/python.exe"
+    },
+    {
+      "name": "Run Frontend (Vite)",
+      "type": "node",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/Code",
+      "console": "integratedTerminal"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Run Neurosense AI (Full App)",
+      "configurations": ["Run Backend (FastAPI)", "Run Frontend (Vite)"]
+    }
+  ]
+}

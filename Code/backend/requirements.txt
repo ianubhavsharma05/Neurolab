@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+python-multipart
+torch
+torchvision
+torchaudio
+librosa
+numpy
+joblib
+scikit-learn
+opencv-python
+pillow
+grad-cam
+matplotlib
+pydantic
+python-dotenv
+uuid

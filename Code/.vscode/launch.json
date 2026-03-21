@@ -1,0 +1,30 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "🚀 Start Full Stack (Backend + Frontend)",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Start Backend",
+            "postDebugTask": "Start Frontend",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ]
+        },
+        {
+            "name": "🐍 Start Backend Only",
+            "type": "node",
+            "request": "launch",
+            "preLaunchTask": "Start Backend"
+        },
+        {
+            "name": "⚛️ Start Frontend Only",
+            "type": "node",
+            "request": "launch",
+            "preLaunchTask": "Start Frontend"
+        }
+    ]
+}
