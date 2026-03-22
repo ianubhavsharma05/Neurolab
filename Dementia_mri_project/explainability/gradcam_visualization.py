@@ -80,7 +80,11 @@ A neurological consultation is strongly recommended for
 medical diagnosis and treatment planning.
 """
 }
-
+transform = transforms.Compose([
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    # Normalized to 0.5 to match the training notebooks
+    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
 def print_clinical_header():
