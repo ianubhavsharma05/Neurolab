@@ -231,6 +231,10 @@ async def calculate_risk(request: RiskRequest):
         "confidence": None  # TODO: derive from model outputs
     }
 
+@app.get("/")
+async def root():
+    return {"message": "Neurosense AI Integrated Core API", "status": "active"}
+
 @app.get("/health")
 async def health():
     return {"status": "synchronized", "mri_loaded": mri_model is not None, "speech_loaded": speech_model is not None}
