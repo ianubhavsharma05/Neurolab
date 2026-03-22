@@ -6,11 +6,11 @@ interface HeatmapProps {
   size?: number;
 }
 
-const Heatmap: React.FC<HeatmapProps> = ({ data, size = 300 }) => {
-  const rows = data.length;
-  const cols = data[0]?.length || 0;
-  const cellW = size / cols;
-  const cellH = size / rows;
+const Heatmap: React.FC<HeatmapProps> = ({ data = [], size = 300 }) => {
+  const rows = data?.length || 0;
+  const cols = data && data.length > 0 ? data[0].length : 0;
+  const cellW = cols > 0 ? size / cols : 0;
+  const cellH = rows > 0 ? size / rows : 0;
 
   const getColor = (val: number) => {
     // Proper heat colormap: dark blue -> cyan -> yellow -> red

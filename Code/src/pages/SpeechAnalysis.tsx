@@ -102,10 +102,7 @@ const SpeechAnalysis: React.FC = () => {
 
   const analyze = async () => {
     if (!audioBlob || !user) return;
-    if (audioBlob.size > 10 * 1024 * 1024) {
-      toast.error("File size must be under 10MB");
-      return;
-    }
+    
     
     // Explicit validation for WAV as per backend requirement
     const isWav = audioBlob.type === 'audio/wav' || 

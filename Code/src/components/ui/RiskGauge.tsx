@@ -11,7 +11,8 @@ interface RiskGaugeProps {
 const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200, label = 'Risk Score', mode = 'risk' }) => {
   const radius = (size - 20) / 2;
   const circumference = Math.PI * radius;
-  const progress = (score / 100) * circumference;
+  const safeScore = isNaN(score) || score === undefined ? 0 : score;
+  const progress = (safeScore / 100) * circumference;
   
   const getColor = (s: number) => {
     if (mode === 'risk') {

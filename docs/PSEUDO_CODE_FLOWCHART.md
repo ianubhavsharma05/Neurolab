@@ -21,18 +21,18 @@ graph TD
     Action --> Cognitive[Cognitive Tests]
     Action --> Reports[Session Matrix]
 
-    MRI --> MRIInput[Select image file]
+    MRI --> MRIInput[Select JPEG/PNG file]
     MRIInput --> MRIUpload[Send file to backend]
-    MRIUpload --> MRIResult[Store MRI result locally]
+    MRIUpload --> MRIResult[Store precisionScore locally]
 
-    Speech --> SpeechInput[Record or upload audio]
-    SpeechInput --> SpeechUpload[Send audio to backend]
-    SpeechUpload --> SpeechResult[Store speech result locally]
+    Speech --> SpeechInput[Record or upload WAV]
+    SpeechInput --> SpeechUpload[Send WAV to backend]
+    SpeechUpload --> SpeechResult[Store precisionScore locally]
 
     Cognitive --> CognitiveFlow[Run browser test flow]
-    CognitiveFlow --> CognitiveResult[Store cognitive result locally]
+    CognitiveFlow --> CognitiveResult[Store overallScore locally]
 
-    MRIResult --> Fusion[Calculate fused accuracy]
+    MRIResult --> Fusion[Calculate precisionScore via /calculate-risk]
     SpeechResult --> Fusion
     CognitiveResult --> Fusion
     Fusion --> Reports
@@ -53,24 +53,30 @@ else:
   showPublicPages()
 
 onMRIUpload:
-  sendImageToBackend()
-  receiveClassificationAndHeatmap()
-  saveMRIResult()
+  if fileIsJPEGorPNG:
+    sendImageToBackend()
+    receiveClassificationAndHeatmap() # Returns precisionScore keyword
+    saveMRIResult()
+  else:
+    showError("Invalid format")
 
 onSpeechUpload:
-  sendAudioToBackend()
-  receiveFeaturesAndClassification()
-  saveSpeechResult()
+  if fileIsWAV:
+    sendAudioToBackend()
+    receiveFeaturesAndClassification() # Returns precisionScore keyword
+    saveSpeechResult()
+  else:
+    showError("Invalid format")
 
 onCognitiveCompletion:
   computeCognitiveScore()
   saveCognitiveResult()
 
 onFusionRequest:
-  sendMRI + speech + cognitive scores
-  receiveOverallAccuracy()
+  sendMRI(precisionScore) + speech(precisionScore) + cognitive(overallScore)
+  receiveOverallRisk() # Computed as (MRI*0.45 + Speech*0.25 + Cognitive*0.30)
   saveAssessment()
 
 onReportExport:
-  generatePDF()
+  generatePDF() # Exports "Precision" telemetry in table rows
 ```

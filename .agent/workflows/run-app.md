@@ -2,82 +2,55 @@
 description: How to run the current NeuroSense AI application manually
 ---
 
-Run both the backend and frontend in separate terminals.
+Run both the backend and frontend in separate terminals to start the full diagnostic environment.
 
-## 1. Start the backend
+## 1. Start the Backend (FastAPI)
 
-Open PowerShell in:
-
-```powershell
-cd c:\Users\ianub\Documents\Neurosense\Code\backend
-```
+Open a PowerShell terminal in:
+`c:\Users\ianub\Documents\Neurosense\Code\backend`
 
 Then run:
-
 ```powershell
 .\start_backend.ps1
 ```
 
-Notes:
+**Notes:**
+- The script automatically handles virtual environment detection and dependency verification.
+- The backend serves at `http://localhost:8000`.
+- Initial model loading (ResNet-18) takes roughly 5–10 seconds.
 
-- The script looks for Python in `Code\backend\.venv` first, then `Code\.venv`
-- The backend serves FastAPI on `http://localhost:8000`
-- Model loading can take a little time on startup
+## 2. Start the Frontend (Vite)
 
-## 2. Start the frontend
+Open a **separate** terminal in:
+`c:\Users\ianub\Documents\Neurosense\Code`
 
-Open PowerShell in:
-
-```powershell
-cd c:\Users\ianub\Documents\Neurosense\Code\backend
-```
-
-Then run:
-
-```powershell
-python main.py
-```
-
-Notes:
-
-- The backend serves FastAPI on `http://localhost:8000`
-
-## 2. Start the frontend
-
-Open a new terminal in:
-
-```powershell
-cd c:\Users\ianub\Documents\Neurosense\Code\frontend
-```
-
-Install packages if needed:
-
+Ensure dependencies are installed:
 ```powershell
 npm install
 ```
 
-Then run:
-
+Start the development server:
 ```powershell
 npm run dev
 ```
 
-The frontend runs on:
+**Notes:**
+- The frontend will be accessible at `http://localhost:5173`.
+- Ensure the backend is running first for API connectivity.
 
-- `http://localhost:4173`
+## 3. Verify the Application
 
-## 3. Verify the app
+1. Open `http://localhost:5173` in your browser.
+2. Confirm the **Intelligence Hub** displays your (demo) patient telemetry.
+3. Test the **MRI Analysis** workflow with a JPEG/PNG scan.
+4. Test the **Vocal Patterns** workflow with a WAV file.
+5. Verify that the **Reports** page lists all diagnostic cycles correctly.
 
-- Open `http://localhost:4173`
-- Confirm the landing page loads
-- Use the navbar to open `Core Capabilities`, `Intelligence Hub`, `MRI Analysis`, `Vocal Patterns`, or `Session Matrix`
-- Toggle `EN / हिंदी` in the navbar to verify bilingual mode
+## 4. Production Build
 
-## 4. Build check
-
-To confirm a production build:
-
+To verify the project for production deployment:
 ```powershell
 cd c:\Users\ianub\Documents\Neurosense\Code
 npm run build
 ```
+This generates a minified `dist/` folder ready for static hosting.

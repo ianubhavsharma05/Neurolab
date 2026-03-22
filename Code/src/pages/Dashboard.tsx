@@ -166,8 +166,8 @@ const Dashboard: React.FC = () => {
       score: latestSpeech?.precisionScore,
       detail: latestSpeech
         ? isHindi
-          ? `${latestSpeech.classification} स्टेज, ${latestSpeech.transcript.split(' ').length} ट्रांसक्रिप्ट टोकन्स के साथ।`
-          : `${latestSpeech.classification} stage with ${latestSpeech.transcript.split(' ').length} transcript tokens captured.`
+          ? `${latestSpeech.classification} स्टेज, ${(latestSpeech.transcript || '').split(' ').filter(Boolean).length} ट्रांसक्रिप्ट टोकन्स के साथ।`
+          : `${latestSpeech.classification} stage with ${(latestSpeech.transcript || '').split(' ').filter(Boolean).length} transcript tokens captured.`
         : isHindi
           ? 'इस मॉड्यूल को सक्रिय करने के लिए वॉइस सैंपल रिकॉर्ड करें।'
           : 'Record a voice sample to activate this module.',
@@ -191,7 +191,6 @@ const Dashboard: React.FC = () => {
       color: 'text-indigo-400',
     },
   ];
-
   const insightCards = [
     {
       label: 'MRI Analysis',
@@ -208,18 +207,29 @@ const Dashboard: React.FC = () => {
     {
       label: isHindi ? 'सेशन मैट्रिक्स' : 'Session Matrix',
       value: latestRisk ? `${latestRisk.precisionScore}% ${isHindi ? 'कुल' : 'overall'}` : isHindi ? 'असेसमेंट की प्रतीक्षा' : 'Awaiting assessment',
-      detail: latestRisk ? (isHindi ? `नवीनतम फ्यूज्ड क्लासिफिकेशन ${latestRisk.classification.toLowerCase()} रिस्क है।` : `Latest fused classification is ${latestRisk.classification.toLowerCase()} risk.`) : isHindi ? 'फ्यूज्ड इंटेलिजेंस लेयर भरने के लिए पूरा सत्र चलाएं।' : 'Run a complete session to populate the fused intelligence layer.',
+      detail: latestRisk ? (isHindi ? `नवीनतम फ्यूज्ड क्लासिफिकेशन ${(latestRisk.classification || 'Low').toLowerCase()} रिस्क है।` : `Latest fused classification is ${(latestRisk.classification || 'Low').toLowerCase()} risk.`) : isHindi ? 'फ्यूज्ड इंटेलिजेंस लेयर भरने के लिए पूरा सत्र चलाएं।' : 'Run a complete session to populate the fused intelligence layer.',
       path: '/reports',
     },
   ];
 
   return (
-    <div className="dashboard-shell relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[34rem]">
-        <div className="dashboard-curve-panel absolute inset-x-[4%] top-8 h-[24rem] rounded-[3rem]" />
-        <div className="absolute -left-16 top-16 h-72 w-72 rounded-full bg-primary/10 blur-[130px]" />
-        <div className="absolute right-[-4rem] top-10 h-80 w-[30rem] rounded-[999px] bg-cyan-400/10 blur-[130px]" />
-        <svg className="absolute bottom-0 left-0 h-28 w-full text-white/[0.07]" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
+    <div className="dashboard-shell relative overflow-hidden min-h-screen bg-[#03040a]">
+      {/* Premium Background Elements */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[40rem] z-0 overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-full">
+            <motion.img 
+                src="/brain-3d.png" 
+                alt="" 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 0.12, scale: 1 }}
+                transition={{ duration: 3 }}
+                className="w-full h-full object-contain blur-[4px]" 
+            />
+        </div>
+        <div className="dashboard-curve-panel absolute inset-x-[4%] top-8 h-[28rem] rounded-[4rem]" />
+        <div className="absolute -left-16 top-16 h-96 w-96 rounded-full bg-primary/10 blur-[140px]" />
+        <div className="absolute right-[-4rem] top-10 h-96 w-[40rem] rounded-[999px] bg-cyan-400/8 blur-[140px]" />
+        <svg className="absolute bottom-0 left-0 h-32 w-full text-white/[0.05]" viewBox="0 0 1440 320" preserveAspectRatio="none" aria-hidden="true">
           <path fill="currentColor" d={CURVE_PATH} />
         </svg>
       </div>
@@ -337,7 +347,7 @@ const Dashboard: React.FC = () => {
               <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-primary">{copy.aggregateScore}</span>
             </div>
             {latestRisk ? (
-              <RiskGauge score={latestRisk.overallRisk} size={260} label={copy.diagnosticAccuracy} />
+              <RiskGauge score={latestRisk.precisionScore} size={280} label={copy.diagnosticAccuracy} mode="precision" />
             ) : (
               <div className="py-12">
                 <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-dashed border-white/10">

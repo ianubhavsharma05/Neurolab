@@ -20,7 +20,7 @@ graph TB
         Main[main.py]
         MRIEndpoint[/POST analyze-mri/]
         SpeechEndpoint[/POST analyze-speech/]
-        AccuracyEndpoint[/POST calculate-accuracy/]
+        RiskEndpoint[/POST calculate-risk/]
         MLUtils[ml_utils.py]
     end
 
@@ -43,11 +43,11 @@ graph TB
 
     API --> MRIEndpoint
     API --> SpeechEndpoint
-    API --> AccuracyEndpoint
+    API --> RiskEndpoint
 
     MRIEndpoint --> Main
     SpeechEndpoint --> Main
-    AccuracyEndpoint --> Main
+    RiskEndpoint --> Main
 
     Main --> MLUtils
     Main --> MRIModel
@@ -69,14 +69,15 @@ graph TB
 
 ### Backend
 
-- FastAPI exposes inference and score-calculation endpoints
-- MRI inference uses PyTorch + torchvision + Grad-CAM
-- Speech inference uses librosa feature extraction and a serialized model
+- FastAPI exposes inference and weighted-risk-calculation endpoints
+- MRI inference uses PyTorch (JPEG/PNG only) + Grad-CAM for explainability
+- Speech inference uses librosa feature extraction and a serialized model (WAV only)
+- `Precision` metrics (85.4% MRI, 92.0% Speech) are integrated into findings data
 
 ### Data Path
 
-1. User input is collected in the frontend
+1. User input is collected in the frontend (WAV/JPEG/PNG formats)
 2. Relevant files or scores are sent to FastAPI
-3. The backend returns predictions and metadata
-4. The frontend stores results locally
-5. Dashboard and reports rebuild the user timeline from stored results
+3. The backend returns predictions (Precision, Classification) and metadata
+4. The frontend stores results locally in indexed structures
+5. Dashboard and reports rebuild the user timeline from stored results using `precisionScore` keywords

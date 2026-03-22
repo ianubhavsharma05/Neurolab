@@ -13,20 +13,21 @@
 - **Automated MRI Analysis:** Leverages a ResNet-18 model to evaluate hippocampus and temporal lobe morphology, returning Grad-CAM heatmaps for explainability.
 - **Vocal Biomarkers Assessment:** Extracts features (MFCCs, pitch instability, speech-to-silence ratio) to identify subtle cognitive decline markers in speech patterns.
 - **Explainable AI (XAI):** Ensures clinical trust by offering transparent insights and heatmap overlays showing *why* a specific classification was made.
+- **Multilingual Support:** Fully bilingual interface supporting **English** and **Hindi** transitions.
 
 ---
 
 ## 2. HOW IT WORKS
 
 ### Workflow Architecture
-1. **Data Input:** Clinicians upload a patient's T2-weighted MRI scan and a short speech recording.
+1. **Data Input:** Clinicians upload a patient's T2-weighted MRI scan (JPEG/PNG) and a short speech recording (WAV).
 2. **Preprocessing:** 
    - **MRI:** Normalization and transformation to a 224x224 tensor.
-   - **Speech:** Trimming and feature extraction (MFCCs, Spectral Centroid, librosa).
+   - **Speech:** Trimming and feature extraction (MFCCs, Spectral Centroid).
 3. **Inference Pipeline:**
    - **Vision Subsystem:** A fine-tuned ResNet-18 model evaluates the brain scan.
    - **Audio Subsystem:** A custom model analyzes acoustic data for hesitation, prosody, and phonetic changes.
-4. **Weighted Ensemble Risk Score:** Results are fused with a cognitive baseline score to produce a single, actionable clinical index: `(MRI * 0.45) + (Speech * 0.25) + (Cognitive * 0.30)`.
+4. **Weighted Ensemble Risk Score:** Results are fused with a cognitive baseline score to produce a single clinical index: `(MRI * 0.45) + (Speech * 0.25) + (Cognitive * 0.30)`.
 
 ---
 
@@ -34,17 +35,17 @@
 
 ### Frontend
 - **React 18 & Vite:** Modern, high-performance web development.
-- **Tailwind CSS & Radix UI:** Premium, accessible, and highly customizable interface.
+- **Tailwind CSS & Radix UI:** Premium, glassmorphic UI elements.
 - **Framer Motion:** Micro-interactions and smooth layout transitions.
 - **Recharts:** Interactive data visualization for longitudinal patient tracking.
+- **jsPDF:** Clinical telemetry export to PDF.
 
 ### Backend & AI Models
-- **FastAPI:** High-performance async API to handle concurrent inference requests.
+- **FastAPI:** High-performance async API for concurrent inference.
 - **PyTorch & torchvision:** Powers the ResNet-18 CNN for interpreting MRI scans.
 - **Scikit-Learn & Joblib:** Used for the speech classification model.
 - **Librosa:** Core audio processing and digital signal manipulation.
-- **pytorch-grad-cam:** Enables XAI by rendering spatial attention maps for MRI evaluations.
-- **OpenCV:** Utility operations for heatmap post-processing.
+- **pytorch-grad-cam:** Enables XAI by rendering spatial attention maps.
 
 ---
 
@@ -52,10 +53,10 @@
 
 | Method | Endpoint | Internal Operation | Response |
 | :--- | :--- | :--- | :--- |
-| **POST** | `/analyze-mri` | Receives multipart/form-data. Yields ResNet CNN inference & spatial heatmap overlay. | JSON with Precision, Classification, and `heatmapData`. |
-| **POST** | `/analyze-speech` | Receives WAV file. Evaluates pitch instability, hesitations, and MFCC features. | JSON with Precision, Classification, and feature dump. |
-| **POST** | `/calculate-risk` | Fuses MRI (45%), Speech (25%), and Cognitive (30%) inputs. | Unified clinical risk (`overallRisk`). |
-| **GET** | `/health` | Verifies models are loaded and GPU (if any) is reachable. | API status & loaded models. |
+| **POST** | `/analyze-mri` | Receives JPEG/PNG. Yields ResNet CNN inference & Grad-CAM heatmap. | JSON with Precision, Classification, and heatmap data. |
+| **POST** | `/analyze-speech` | Receives WAV file. Evaluates pitch instability, hesitations, and MFCCs. | JSON with Precision, Classification, and feature dump. |
+| **POST** | `/calculate-risk` | Fuses MRI (45%), Speech (25%), and Cognitive (30%) inputs. | Unified clinical risk assessment. |
+| **GET** | `/health` | Verifies models are loaded and GPU is reachable. | API status & loaded models. |
 
 ---
 
@@ -77,7 +78,7 @@
    cd Code
    npm install
    npm run dev
-   # Server spins up at http://localhost:5173 (or as configured)
+   # Accessible at http://localhost:5173
    ```
 
 3. **Backend Setup:**
@@ -85,11 +86,10 @@
    cd Code/backend
    python -m venv .venv
    .\.venv\Scripts\activate   # On Windows
-   # source .venv/bin/activate # On Unix
    pip install -r requirements.txt
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
-   *Make sure model artifacts (`final_model.pth`, `speech_model.pkl`) are placed under `Code/backend/models/` before starting.*
+   *Ensure model artifacts are placed under `Code/backend/models/`.*
 
 ---
 
@@ -101,21 +101,34 @@
 │   ├── 📁 backend           # FastAPI backend server
 │   │   ├── 📁 models        # PyTorch & Scikit-learn models
 │   │   ├── main.py          # Application endpoints & core logic
-│   │   ├── test_models.py   # Unit testing
 │   │   └── requirements.txt # Python dependencies
-│   ├── 📁 src               # React Frontend components & views
-│   ├── 📁 public            # Static web assets
+│   ├── 📁 src               # React Frontend (App.tsx, pages, etc.)
 │   ├── package.json         # Node.js dependencies
 │   └── tailwind.config.ts   # UI styling configuration
-├── README.md                # Project documentation
+├── 📁 docs                  # High-level architecture and flowcharts
+└── README.md                # Integrated project documentation
 ```
 
 ---
 
-## 7. AI MODELS RECAP
+## 7. MAIN USER FLOWS
 
-- **MRI Vision Engine (ResNet-18):** 18-layer CNN transfer-learned on brain scans, modifying the fully connected layer to output one of 4 dementia severity classes (NonDemented, VeryMild, Mild, Moderate). Evaluated via robust spatial attention logic (Grad-CAM).
-- **Speech Classifier:** Evaluates 10-second vocal clips assessing prosody (pitch instability) and fluency (speech-to-silence ratio), passing an ensemble array of 13 MFCCs into a structured classifier pipeline.
+### 🏥 Intelligence Hub (Dashboard)
+- Transparent, curved dashboard shell with quick links to all modules.
+- Longitudinal charting (History) shows diagnostic volatility over time.
+- Integrated `RiskGauge` for immediate clinical risk visualization.
+
+### 🧠 MRI Structural Analysis
+- Clinicians upload brain scans to compute dementia severity classes.
+- XAI logic displays Grad-CAM heatmaps showing neuroimaging focus areas.
+
+### 🎤 Vocal Pattern Intelligence
+- Real-time recording or WAV upload to extract acoustic biomarkers.
+- Visualization of prosody, fluency, and phonetic biomarkers.
+
+### 📑 Session Matrix (Reports)
+- A longitudinal data archive showing all previous diagnostic telemetry.
+- One-click PDF export for clinical distribution.
 
 ---
-**Developed efficiently for modern telemedicine diagnostics.**
+**Finalized for modern telemedicine and advanced cognitive diagnostics.**

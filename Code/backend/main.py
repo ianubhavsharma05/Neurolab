@@ -83,12 +83,13 @@ def generate_gradcam(model, input_tensor):
     cam = GradCAM(model=model, target_layers=[target_layer])
     grayscale_cam = cam(input_tensor=input_tensor)[0]
     
-    heatmap_data = []  # Simplified for frontend Heatmap component compatibility
+    heatmap_data = []
     cam_resized = cv2.resize(grayscale_cam, (16, 16))
     for i in range(16):
+        row = []
         for j in range(16):
-            val = float(cam_resized[i, j])
-            heatmap_data.append({"x": i, "y": j, "value": val})
+            row.append(float(cam_resized[i, j]))
+        heatmap_data.append(row)
     return heatmap_data
 
 def extract_speech_features(file_path):
@@ -124,11 +125,30 @@ async def analyze_mri(file: UploadFile = File(...)):
         
         with torch.no_grad():
             outputs = mri_model(input_tensor)
-            probs = torch.softmax(outputs, dim=1)
-            confidence, pred = torch.max(probs, 1)
+            probs = torch.softmax(outputs, dim=1)[0]
+            
+            # --- PATHOLOGY BIAS MULTIPLIER ---
+            # To counteract the model's 'Healthy' bias, we apply a 1.8x multiplier 
+            # to all pathology-suspect categories (Index 0, 1, 3).
+            # This makes the detection logic much more sensitive to subtle atrophy.
+            weighted_probs = probs.clone()
+            pathology_indices = [0, 1, 3] # Mild, Moderate, VeryMild
+            for idx in pathology_indices:
+                weighted_probs[idx] *= 1.8 # Boost pathology sensitivity
+            
+            # Recalculate winner based on weighted probabilities
+            confidence, pred = torch.max(weighted_probs, 0)
+            
+            # Log raw probabilities for clinical debugging (viewable in terminal)
+            print(f"RAW Probabilities: {probs.tolist()}")
+            print(f"BIAS-FIXED Indices: {weighted_probs.tolist()} -> Predicted: {MRI_CLASS_NAMES[pred.item()]}")
+            
+            # Ensure the final index is used for label mapping
+            pred_idx = pred.item()
+            # --- END OF BIAS CORRECTION ---
         
-        raw_label = MRI_CLASS_NAMES[pred.item()]
-        classification = MRI_LABEL_MAP.get(raw_label, "Moderate")
+        raw_label = MRI_CLASS_NAMES[pred_idx] # Extract the detected neuroanatomical variant
+        classification = MRI_LABEL_MAP.get(raw_label, "Moderate") # Trigger clinical UI states
         
         heatmap_data = generate_gradcam(mri_model, input_tensor)
 
@@ -180,7 +200,7 @@ async def analyze_speech(file: UploadFile = File(...)):
                 "jitter": None,    # not yet implemented
                 "shimmer": None,   # not yet implemented
                 "pitch": float(features[0, 14]),
-                "hesitation_ratio": float(features[0, 13]),
+                "pauseDuration": float(features[0, 13]),
                 "spectralCentroid": float(features[0, 15])
             }
         }
@@ -194,9 +214,15 @@ async def analyze_speech(file: UploadFile = File(...)):
 async def calculate_risk(request: RiskRequest):
     # Weighted Ensemble Fuser logic from README
     total_risk = (request.mri_score * 0.45) + (request.speech_score * 0.25) + (request.cognitive_score * 0.30)
-    
+    classification = "Low"
+    if total_risk > 66:
+        classification = "High"
+    elif total_risk > 33:
+        classification = "Moderate"
+        
     return {
         "overallRisk": total_risk,
+        "classification": classification,
         "recommendation": "Clinical consultation recommended." if total_risk > 50 else "Longitudinal tracking advised.",
         "confidence": None  # TODO: derive from model outputs
     }

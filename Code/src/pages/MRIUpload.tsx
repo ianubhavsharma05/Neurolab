@@ -40,7 +40,6 @@ const MRIUpload: React.FC = () => {
         reset: 'न्यूरल कोर रीसेट करें',
         start: 'न्यूरल एनालिसिस शुरू करें',
         drop: 'MRI स्कैन यहाँ छोड़ें या ब्राउज़ करें',
-        limit: 'अधिकतम फ़ाइल आकार: 10MB (JPG/PNG)',
       }
     : {
         module: 'Neuronal Imaging Module',
@@ -57,7 +56,6 @@ const MRIUpload: React.FC = () => {
         reset: 'Reset Neural Core',
         start: 'START NEURAL ANALYSIS',
         drop: 'Drop MRI Scan here or browse',
-        limit: 'Max file size: 10MB (JPG/PNG)',
       };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,10 +71,6 @@ const MRIUpload: React.FC = () => {
 
   const analyze = async () => {
     if (!file || !user) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size must be under 10MB');
-      return;
-    }
     if (!file.type.startsWith('image/') || file.type === 'image/dicom') {
       toast.error('Please upload a valid MRI image (JPEG/PNG)');
       return;
@@ -142,8 +136,8 @@ const MRIUpload: React.FC = () => {
                   <div className="text-center">
                     <div className="relative w-24 h-24 mx-auto mb-10">
                         <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full animate-pulse" />
-                        <div className="relative w-24 h-24 rounded-full bg-[#0a0b14] border border-white/10 flex items-center justify-center transform group-hover:scale-110 transition-all duration-700 shadow-2xl overflow-hidden">
-                           <Upload className="w-10 h-10 text-primary/40 group-hover:text-primary transition-colors duration-500" />
+                         <div className="relative w-24 h-24 rounded-full bg-[#0a0b14] border border-white/10 flex items-center justify-center transform group-hover:scale-110 transition-all duration-700 shadow-2xl overflow-hidden">
+                           <img src="/upload-icon.png" alt="Upload" className="w-14 h-14 object-contain opacity-40 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                            <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(0,245,155,0.4)]">
@@ -151,7 +145,6 @@ const MRIUpload: React.FC = () => {
                         </div>
                     </div>
                     <p className="text-xl font-bold text-white mb-2 tracking-tight uppercase">{copy.drop}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.3em] opacity-60">{copy.limit}</p>
                   </div>
                 ) : (
                   <div className="relative w-full aspect-square rounded-2xl overflow-hidden border border-white/10 shadow-2xl group/preview">

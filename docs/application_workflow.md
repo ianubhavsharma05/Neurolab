@@ -28,7 +28,7 @@ graph TD
 
     MRI --> MRIAPI[POST /analyze-mri]
     Speech --> SpeechAPI[POST /analyze-speech]
-    Cognitive --> RiskCalc[POST /calculate-accuracy]
+    Cognitive --> RiskCalc[POST /calculate-risk]
 
     MRIAPI --> FastAPI[FastAPI Backend]
     SpeechAPI --> FastAPI
@@ -52,42 +52,42 @@ graph TD
 - Demo authentication
 - English/Hindi language switching
 - Transparent dashboard shell and visual presentation
-- Upload forms and audio recording
+- Upload forms and audio recording (WAV format validation)
 - Local result persistence in `localStorage`
 - Charts, gauges, waveforms, and report export
 
 ## Backend Responsibilities
 
-- MRI image inference
-- Speech feature extraction and inference
+- MRI image inference (JPEG/PNG only)
+- Speech feature extraction and inference (WAV input only)
 - Grad-CAM heatmap generation
-- Weighted fused score calculation
+- Weighted fused score calculation (Precision-based)
 
 ## Module Summary
 
 ### MRI Analysis
 
-- Upload image
-- Backend returns accuracy, classification, metadata, findings, and heatmap data
+- Upload JPEG/PNG scan
+- Backend returns precisionScore, classification, metadata, findings, and heatmap data
 
 ### Vocal Patterns
 
-- Record or upload audio
-- Backend returns acoustic features, transcript-style findings, waveform data, and classification
+- Record or upload WAV audio
+- Backend returns acoustic features, transcript-style findings, waveform data, and classification (Precision-based)
 
 ### Cognitive Tests
 
 - Run browser-based interaction flow
 - Compute session score
-- Feed final values into fused risk calculation
+- Feed final values into fused risk calculation via backend
 
 ### Intelligence Hub
 
-- Show latest module scores
-- Show longitudinal chart
-- Show recent sessions and navigation cards
+- Show latest module precision scores
+- Show longitudinal charts for Risk and MRI signals
+- Show latest fused status (Low/Moderate/High)
 
 ### Session Matrix
 
-- List fused entries
-- Export PDF summaries
+- List detailed logs of all diagnostic cycles
+- Export PDF summaries including precision telemetry

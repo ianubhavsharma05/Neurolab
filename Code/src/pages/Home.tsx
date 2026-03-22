@@ -110,6 +110,15 @@ const Home: React.FC = () => {
                 </button>
               </Link>
             </div>
+            <motion.div
+              style={{ x: "-50%" }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 0.15, scale: 1 }}
+              transition={{ delay: 0.8, duration: 2, repeat: Infinity, repeatType: 'reverse' }}
+              className="absolute left-1/2 -bottom-40 w-full max-w-5xl pointer-events-none -z-10"
+            >
+              <img src="/brain-3d.png" alt="Brain Visualization" className="w-full h-auto object-contain blur-[2px]" />
+            </motion.div>
           </motion.div>
         </div>
 

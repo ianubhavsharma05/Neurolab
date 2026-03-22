@@ -30,7 +30,7 @@ The UI changes based on:
 - authentication state
 - selected language
 - whether a result has been produced yet
-- whether the user is recording or uploading data
+- whether the user is recording or uploading data (JPEG/PNG/WAV validations)
 
 Example pattern:
 
@@ -46,10 +46,10 @@ The frontend stores session data in `localStorage`.
 
 Tracked collections include:
 
-- MRI results
-- speech results
-- cognitive results
-- fused risk assessments
+- MRI results (precisionScore)
+- speech results (precisionScore)
+- cognitive results (overallScore)
+- fused risk assessments (precisionScore)
 
 This allows the dashboard and reports pages to rebuild history without a database dependency in the current frontend flow.
 
@@ -59,9 +59,9 @@ The frontend sends user inputs to FastAPI using `fetch`.
 
 Current API calls:
 
-- `POST /analyze-mri`
-- `POST /analyze-speech`
-- `POST /calculate-accuracy`
+- `POST /analyze-mri` (JPEG/PNG mandatory)
+- `POST /analyze-speech` (WAV mandatory)
+- `POST /calculate-risk` (weighted fusion)
 
 Example pattern:
 
@@ -80,10 +80,10 @@ The backend computes a combined score from three signals:
 - Speech: 25%
 - Cognitive: 30%
 
-Example:
+Example (Updated Logic):
 
 ```python
-overall_accuracy = (
+precision_score = (
     request.mriScore * 0.45 +
     request.speechScore * 0.25 +
     request.cognitiveScore * 0.30
@@ -94,24 +94,22 @@ overall_accuracy = (
 
 The UI renders multiple visual formats:
 
-- gauges for confidence and summary scores
-- line charts for longitudinal trends
-- heatmaps for MRI explainability
-- waveform visualization for speech
+- gauges for risk and precision scores
+- line charts for longitudinal trends (MRI vs Fused)
+- heatmaps for MRI explainability (Grad-CAM overlays)
+- waveform visualization for speech markers
 
-These are built from stored result objects rather than hardcoded display values.
+These are built from stored result objects using the finalized data schema in `types/index.ts`.
 
 ## 7. Progressive UI States
 
 Several pages follow the same state progression:
 
 1. idle
-2. input collected
-3. processing
-4. result rendered
+2. input collected (WAV/JPEG/PNG)
+3. processing (Loading screens with technical logging)
+4. result rendered (Heatmaps, feature lists, gauges)
 5. reset / re-run
-
-This pattern is visible in MRI and speech analysis flows.
 
 ## 8. Route Experience
 
@@ -119,6 +117,6 @@ The app includes:
 
 - scroll reset on route change
 - shared curved page-shell styling
-- transparent panel surfaces
+- transparent panel surfaces (Glassmorphism)
 
 This keeps navigation between dashboard, about, MRI, speech, and reports visually consistent.

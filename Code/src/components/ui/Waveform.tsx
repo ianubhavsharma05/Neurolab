@@ -7,8 +7,8 @@ interface WaveformProps {
   height?: number;
 }
 
-const Waveform: React.FC<WaveformProps> = ({ data, width = 600, height = 120 }) => {
-  const barWidth = width / data.length;
+const Waveform: React.FC<WaveformProps> = ({ data = [], width = 600, height = 120 }) => {
+  const barWidth = data?.length > 0 ? width / data.length : 0;
 
   return (
     <div className="rounded-lg border border-border bg-card p-3 overflow-hidden">
