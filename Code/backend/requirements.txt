@@ -1,11 +1,6 @@
 fastapi
 uvicorn
 python-multipart
-# CPU-only version for Render Free to avoid OOM and keep image size small
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.1+cpu
-torchvision==0.17.1+cpu
-torchaudio==2.2.1+cpu
 librosa
 numpy
 joblib

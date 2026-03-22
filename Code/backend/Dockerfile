@@ -12,11 +12,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy requirements first for better Docker caching
+# Step 1: Install PyTorch CPU-only FIRST (separate step for clarity and caching)
+# Using --index-url ensures we get the CPU build, not the CUDA one
+RUN pip install --no-cache-dir \
+    torch==2.2.2+cpu \
+    torchvision==0.17.2+cpu \
+    torchaudio==2.2.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
+
+# Step 2: Copy and install remaining requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code and models
+# Step 3: Copy application code and models
 COPY . .
 
 # Expose the port
