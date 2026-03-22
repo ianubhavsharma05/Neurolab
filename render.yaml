@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: neurosense-backend
+    runtime: docker
+    dockerfilePath: ./Code/backend/Dockerfile
+    dockerContext: ./Code/backend
+    plan: free
+    envVars:
+      - key: CORS_ORIGINS
+        value: https://neurosense-ai.vercel.app,http://localhost:5173,http://localhost:4173
+      - key: PORT
+        value: 8000

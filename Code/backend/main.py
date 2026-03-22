@@ -20,6 +20,11 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from torchvision import transforms
 
 # --- CONFIGURATION & CONSTANTS ---
+PORT = int(os.environ.get("PORT", 8000))
+CORS_ORIGINS = os.environ.get(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://localhost:4173"
+).split(",")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MRI_MODEL_PATH = "models/final_model.pth"
 SPEECH_MODEL_PATH = "models/speech_model.pkl"
@@ -44,7 +49,7 @@ app = FastAPI(title="Neurosense AI Integrated Core", version="2.0.0")
 # Enable CORS for frontend interaction
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -232,4 +237,4 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
