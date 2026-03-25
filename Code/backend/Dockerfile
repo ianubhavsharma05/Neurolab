@@ -12,15 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Step 1: Install PyTorch CPU-only FIRST (separate step for clarity and caching)
-# Using --index-url ensures we get the CPU build, not the CUDA one
+# Step 1: Pin numpy FIRST — must be <2.0 for PyTorch 2.2.x + grad-cam compatibility
+RUN pip install --no-cache-dir "numpy==1.26.4"
+
+# Step 2: Install PyTorch CPU-only — uses --index-url to avoid 3GB CUDA download
 RUN pip install --no-cache-dir \
     torch==2.2.2+cpu \
     torchvision==0.17.2+cpu \
     torchaudio==2.2.2+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
-# Step 2: Copy and install remaining requirements
+# Step 3: Copy and install remaining requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
