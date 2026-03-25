@@ -85,18 +85,24 @@ if os.path.exists(SPEECH_MODEL_PATH):
 # --- UTILITY FUNCTIONS ---
 
 def generate_gradcam(model, input_tensor):
-    target_layer = model.layer4[-1]
-    cam = GradCAM(model=model, target_layers=[target_layer])
-    grayscale_cam = cam(input_tensor=input_tensor)[0]
-    
-    heatmap_data = []
-    cam_resized = cv2.resize(grayscale_cam, (16, 16))
-    for i in range(16):
-        row = []
-        for j in range(16):
-            row.append(float(cam_resized[i, j]))
-        heatmap_data.append(row)
-    return heatmap_data
+    try:
+        target_layer = model.layer4[-1]
+        # GradCAM REQUIRES gradients — must be called outside torch.no_grad()
+        cam = GradCAM(model=model, target_layers=[target_layer])
+        grayscale_cam = cam(input_tensor=input_tensor)[0]
+        
+        heatmap_data = []
+        cam_resized = cv2.resize(grayscale_cam, (16, 16))
+        for i in range(16):
+            row = []
+            for j in range(16):
+                row.append(float(cam_resized[i, j]))
+            heatmap_data.append(row)
+        return heatmap_data
+    except Exception as e:
+        print(f"GradCAM warning (returning blank heatmap): {e}")
+        # Return a neutral blank heatmap so classification still works
+        return [[0.0] * 16 for _ in range(16)]
 
 def extract_speech_features(file_path):
     audio, sr = librosa.load(file_path, duration=10)
@@ -129,32 +135,32 @@ async def analyze_mri(file: UploadFile = File(...)):
         image = Image.open(BytesIO(content)).convert("RGB")
         input_tensor = MRI_TRANSFORM(image).unsqueeze(0).to(DEVICE)
         
+        # Run classification inside no_grad for speed
         with torch.no_grad():
             outputs = mri_model(input_tensor)
             probs = torch.softmax(outputs, dim=1)[0]
             
             # --- PATHOLOGY BIAS MULTIPLIER ---
-            # Boosted to 2.0 to ensure Mild/Moderate/VeryMild cases are caught.
             weighted_probs = probs.clone()
-            pathology_indices = [0, 1, 3] # Mild, Moderate, VeryMild
+            pathology_indices = [0, 1, 3]  # Mild, Moderate, VeryMild
             for idx in pathology_indices:
-                weighted_probs[idx] *= 2.0 
+                weighted_probs[idx] *= 2.0
             
-            # Recalculate winner and re-normalize for a valid 0-100% confidence display
             normalizer = weighted_probs.sum()
             normalized_probs = weighted_probs / normalizer
             confidence, pred = torch.max(normalized_probs, 0)
             
             print(f"RAW Probabilities: {probs.tolist()}")
             print(f"BIAS-FIXED Result: {MRI_CLASS_NAMES[pred.item()]} (Confidence: {confidence.item():.2f})")
-            
             pred_idx = pred.item()
-            # --- END OF BIAS CORRECTION ---
         
-        raw_label = MRI_CLASS_NAMES[pred_idx] # Extract the detected neuroanatomical variant
-        classification = MRI_LABEL_MAP.get(raw_label, "Moderate") # Trigger clinical UI states
+        raw_label = MRI_CLASS_NAMES[pred_idx]
+        classification = MRI_LABEL_MAP.get(raw_label, "Moderate")
         
-        heatmap_data = generate_gradcam(mri_model, input_tensor)
+        # GradCAM runs OUTSIDE no_grad — it needs gradients enabled
+        # A fresh tensor copy ensures the computation graph is available
+        gradcam_tensor = MRI_TRANSFORM(image).unsqueeze(0).to(DEVICE)
+        heatmap_data = generate_gradcam(mri_model, gradcam_tensor)
 
         return {
             "id": str(uuid.uuid4()),
@@ -174,6 +180,8 @@ async def analyze_mri(file: UploadFile = File(...)):
             }
         }
     except Exception as e:
+        import traceback
+        print(f"MRI Analysis Error: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/analyze-speech")
