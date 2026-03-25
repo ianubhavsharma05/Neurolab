@@ -26,7 +26,13 @@ RUN pip install --no-cache-dir \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Step 3: Copy application code and models
+# Step 4: Hard re-pin numpy AFTER all installs to prevent any package from upgrading it
+RUN pip install --no-cache-dir --force-reinstall "numpy==1.26.4"
+
+# Step 5: Verify numpy version at build time
+RUN python -c "import numpy; print('numpy version:', numpy.__version__); assert numpy.__version__.startswith('1.'), f'FATAL: numpy {numpy.__version__} is incompatible! Must be 1.x'"
+
+# Step 6: Copy application code and models
 COPY . .
 
 # Expose the port
