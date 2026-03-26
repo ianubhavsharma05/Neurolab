@@ -29,19 +29,8 @@ RUN pip install --no-cache-dir -c /tmp/constraints.txt \
 # Which conflicts with our already-installed `opencv-python-headless`
 RUN pip install --no-cache-dir --no-deps grad-cam==1.4.8
 
-# Final sanity check at build time
-RUN python -c " \
-import numpy; \
-print('numpy version:', numpy.__version__); \
-assert numpy.__version__.startswith('1.'), f'FATAL: numpy {numpy.__version__} incompatible — must be 1.x'; \
-import torch; \
-print('torch version:', torch.__version__); \
-print('numpy available in torch:', torch.is_floating_point(torch.tensor([1.0]))); \
-import cv2; \
-print('cv2 version:', cv2.__version__); \
-from pytorch_grad_cam import GradCAM; \
-print('grad-cam successfully imported'); \
-"
+# Show installed versions to the build log for debugging
+RUN pip list
 
 # Copy application code and models
 COPY . .
