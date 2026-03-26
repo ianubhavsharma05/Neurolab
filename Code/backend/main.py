@@ -79,21 +79,38 @@ def load_mri_model():
 
 mri_model = load_mri_model()
 
+# Environment Check for Debugging
+try:
+    import sklearn
+    print(f"[DEBUG] Scikit-learn version: {sklearn.__version__}")
+except ImportError:
+    print("[DEBUG] Scikit-learn NOT INSTALLED")
+
 speech_model = None
 if os.path.exists(SPEECH_MODEL_PATH):
+    print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
     # Compatibility patch for scikit-learn _loss module mismatch
     try:
         try:
             # For sklearn >= 1.3
             import sklearn._loss as sklearn_loss
+            print(f"[DEBUG] Found sklearn._loss at {sklearn_loss.__file__}")
             sys.modules['_loss'] = sklearn_loss
         except ImportError:
             # For sklearn < 1.3 (e.g. 1.1, 1.2) - map to ensemble losses
             import sklearn.ensemble._gb_losses as sklearn_loss
+            print(f"[DEBUG] Mapping _loss to sklearn.ensemble._gb_losses")
             sys.modules['_loss'] = sklearn_loss
     except ImportError:
-        pass
-    speech_model = joblib.load(SPEECH_MODEL_PATH)
+        print("[DEBUG] Failed to map _loss module")
+    
+    try:
+        speech_model = joblib.load(SPEECH_MODEL_PATH)
+        print("[DEBUG] Speech model loaded successfully!")
+    except Exception as e:
+        print(f"[DEBUG] FAILED to load speech model: {e}")
+        import traceback
+        traceback.print_exc()
 
 # --- UTILITY FUNCTIONS ---
 
