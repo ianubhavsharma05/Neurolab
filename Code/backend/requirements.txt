@@ -13,7 +13,7 @@ python-multipart==0.0.9
 librosa==0.10.2
 joblib==1.4.2
 scikit-learn==1.8.0
-opencv-python-headless==4.9.0.80
+opencv-python-headless==4.10.0.84
 pillow==10.3.0
 matplotlib==3.9.0
 pydantic==2.7.1
