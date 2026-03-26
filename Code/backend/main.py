@@ -83,8 +83,14 @@ speech_model = None
 if os.path.exists(SPEECH_MODEL_PATH):
     # Compatibility patch for scikit-learn _loss module mismatch
     try:
-        import sklearn._loss as sklearn_loss
-        sys.modules['_loss'] = sklearn_loss
+        try:
+            # For sklearn >= 1.3
+            import sklearn._loss as sklearn_loss
+            sys.modules['_loss'] = sklearn_loss
+        except ImportError:
+            # For sklearn < 1.3 (e.g. 1.1, 1.2) - map to ensemble losses
+            import sklearn.ensemble._gb_losses as sklearn_loss
+            sys.modules['_loss'] = sklearn_loss
     except ImportError:
         pass
     speech_model = joblib.load(SPEECH_MODEL_PATH)
