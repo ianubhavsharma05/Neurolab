@@ -72,16 +72,71 @@ const SpeechAnalysis: React.FC = () => {
         reset: 'Reset Acoustic Core',
       };
 
+  // Helper to convert audio buffer to true WAV format
+  const audioBufferToWav = (buffer: AudioBuffer): Blob => {
+    const interleaved = buffer.getChannelData(0); // Take first channel (mono) for analysis
+    const dataLength = interleaved.length * 2;
+    const arrayBuffer = new ArrayBuffer(44 + dataLength);
+    const view = new DataView(arrayBuffer);
+
+    const writeString = (view: DataView, offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) {
+        view.setUint8(offset + i, str.charCodeAt(i));
+      }
+    };
+
+    // RIFF chunk descriptor
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataLength, true);
+    writeString(view, 8, 'WAVE');
+    
+    // fmt sub-chunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, buffer.sampleRate, true); // Sample rate
+    view.setUint32(28, buffer.sampleRate * 2, true); // Byte rate
+    view.setUint16(32, 2, true); // Block align
+    view.setUint16(34, 16, true); // Bits per sample
+    
+    // data sub-chunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataLength, true);
+    
+    // Write PCM samples
+    let offset = 44;
+    for (let i = 0; i < interleaved.length; i++) {
+      let s = Math.max(-1, Math.min(1, interleaved[i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+    
+    return new Blob([view], { type: 'audio/wav' });
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
       chunks.current = [];
       mediaRecorder.current.ondataavailable = e => chunks.current.push(e.data);
-      mediaRecorder.current.onstop = () => {
-        const blob = new Blob(chunks.current, { type: 'audio/wav' }); // Backend expects WAV
-        setAudioBlob(blob);
+      mediaRecorder.current.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
+        const originalBlob = new Blob(chunks.current);
+        
+        try {
+          // Convert WebM/MP4 into a True WAV file to ensure compatibility on Vercel Backend
+          // since Vercel Lambda does not have ffmpeg to demux WebM formats.
+          const arrayBuffer = await originalBlob.arrayBuffer();
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          const wavBlob = audioBufferToWav(audioBuffer);
+          setAudioBlob(wavBlob);
+        } catch (err) {
+          console.error('[Speech] Conversion to true WAV failed:', err);
+          setAudioBlob(new Blob(chunks.current, { type: 'audio/wav' })); // fallback
+        }
       };
       mediaRecorder.current.start();
       setRecording(true);

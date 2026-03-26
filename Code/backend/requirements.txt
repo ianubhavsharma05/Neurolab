@@ -8,6 +8,7 @@ numpy==2.4.3
 
 # ── Application dependencies ───────────────────────────────────────────────────
 fastapi==0.111.0
+starlette==0.37.2
 uvicorn==0.29.0
 python-multipart==0.0.9
 librosa==0.10.2
@@ -19,6 +20,10 @@ matplotlib==3.9.0
 pydantic==2.7.1
 python-dotenv==1.0.1
 
-# Dependencies for grad-cam (since we install it with --no-deps)
+# ── AI Core Dependencies ───────────────────────────────────────────────────────
+# NOTE: these are CPU-only versions for Render/Railway, set up correctly here
+torch>=2.1.0
+torchvision>=0.16.0
+grad-cam==1.5.0
 ttach==0.0.3
 tqdm

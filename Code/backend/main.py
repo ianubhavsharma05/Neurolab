@@ -5,6 +5,15 @@ import tempfile
 import uuid
 from io import BytesIO
 
+# Force single-threaded audio processing to prevent librosa/numba freeze on Windows
+os.environ.setdefault("NUMBA_NUM_THREADS", "1")
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+# Vercel AWS Lambda read-only file system fixes (using tempfile for local Windows compatibility)
+os.environ.setdefault("NUMBA_CACHE_DIR", tempfile.gettempdir())
+os.environ.setdefault("MPLCONFIGDIR", tempfile.gettempdir())
+os.environ.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
+
 import cv2
 import joblib
 import librosa
@@ -25,10 +34,7 @@ from torchvision import transforms
 
 # --- CONFIGURATION & CONSTANTS ---
 PORT = int(os.environ.get("PORT", 8000))
-CORS_ORIGINS = os.environ.get(
-    "CORS_ORIGINS",
-    "http://localhost:5173,http://localhost:4173"
-).split(",")
+CORS_ORIGINS = ["*"]
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Use absolute paths anchored to this file so the server works from any CWD
@@ -56,7 +62,7 @@ app = FastAPI(title="Neurosense AI Integrated Core", version="2.0.0")
 # Enable CORS for frontend interaction
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,26 +158,32 @@ def generate_gradcam(input_tensor):
         return [[0.0] * 16 for _ in range(16)]
 
 def extract_speech_features(file_path):
-    audio, sr = librosa.load(file_path, duration=10)
+    # Use mono=True and a fixed sample rate to keep processing fast and deterministic
+    audio, sr = librosa.load(file_path, sr=22050, mono=True, duration=10)
     audio, _ = librosa.effects.trim(audio)
-    
-    # 2. Hesitation (Speech-to-Silence)
+
+    if len(audio) == 0:
+        raise ValueError("Audio file is empty or could not be decoded.")
+
+    # Speech-to-Silence ratio (hesitation marker)
     intervals = librosa.effects.split(audio, top_db=20)
-    speech_feat = np.array([i[1] - i[0] for i in intervals])
-    speech_ratio = np.sum(speech_feat) / len(audio) if len(audio) > 0 else 0
-    
-    # 3. Pitch Instability
-    pitches, magnitudes = librosa.piptrack(y=audio, sr=sr)
+    speech_feat = np.array([i[1] - i[0] for i in intervals]) if len(intervals) > 0 else np.array([0])
+    speech_ratio = float(np.sum(speech_feat) / len(audio))
+
+    # Pitch Instability — use fmin/fmax to speed up piptrack
+    pitches, _ = librosa.piptrack(y=audio, sr=sr, fmin=50, fmax=500)
     pitch_values = pitches[pitches > 0]
-    pitch_instability = np.std(pitch_values) if len(pitch_values) > 0 else 0
-    
-    # 4. MFCCs (13)
+    pitch_instability = float(np.std(pitch_values)) if len(pitch_values) > 0 else 0.0
+
+    # MFCCs (13 coefficients) — matches training feature set
     mfccs = np.mean(librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13).T, axis=0)
-    
-    # 5. Spectral Centroid
-    centroid = np.mean(librosa.feature.spectral_centroid(y=audio, sr=sr))
-    
-    return np.hstack([mfccs, [speech_ratio, pitch_instability, centroid]])
+
+    # Spectral Centroid
+    centroid = float(np.mean(librosa.feature.spectral_centroid(y=audio, sr=sr)))
+
+    features = np.hstack([mfccs, [speech_ratio, pitch_instability, centroid]])
+    print(f"[DEBUG] Speech features shape: {features.shape}")
+    return features
 
 # --- ENDPOINTS ---
 
