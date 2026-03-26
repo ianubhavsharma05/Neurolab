@@ -9,9 +9,12 @@ interface RiskGaugeProps {
 }
 
 const RiskGauge: React.FC<RiskGaugeProps> = ({ score, size = 200, label = 'Risk Score', mode = 'risk' }) => {
+  // --- GAUGE MATHEMATICS ---
+  // Calculates the size and shape of the semi-circle
   const radius = (size - 20) / 2;
-  const circumference = Math.PI * radius;
+  const circumference = Math.PI * radius; // Half-circle circumference
   const safeScore = isNaN(score) || score === undefined ? 0 : score;
+  // This calculates how much of the circular line to "fill" based on the percentage score
   const progress = (safeScore / 100) * circumference;
   
   const getColor = (s: number) => {

@@ -42,19 +42,27 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // --- STEP 1: RETRIEVING ALL MEDICAL HISTORY ---
+  // We fetch every past result for the current user from our local browser storage.
   const mriResults = dataStore.getMRIResults(user.id);
   const speechResults = dataStore.getSpeechResults(user.id);
   const cognitiveResults = dataStore.getCognitiveResults(user.id);
   const riskAssessments = dataStore.getRiskAssessments(user.id);
   const history = dataStore.getHistoricalData(user.id);
 
+  // --- STEP 2: LATEST DATA SLICE ---
+  // We grab the absolute newest entry from each list to display the current "state" of the patient.
   const latestRisk = riskAssessments[riskAssessments.length - 1];
   const latestMRI = mriResults[mriResults.length - 1];
   const latestSpeech = speechResults[speechResults.length - 1];
   const latestCognitive = cognitiveResults[cognitiveResults.length - 1];
 
+  // METRICS CALCULATION:
+  // totalSessions: Total interactions with the NeuroSense platform.
+  // activeModules: How many of the 3 key tests (MRI, Speech, Cognitive) have been completed at least once.
   const totalSessions = mriResults.length + speechResults.length + cognitiveResults.length;
   const activeModules = [latestMRI, latestSpeech, latestCognitive].filter(Boolean).length;
+  // recentTimeline: The last 5 combined assessments shown in the scrollable feed.
   const recentTimeline = [...riskAssessments].slice(-5).reverse();
 
   const quickActions = isHindi

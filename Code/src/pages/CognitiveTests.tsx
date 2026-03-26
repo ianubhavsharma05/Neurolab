@@ -39,7 +39,9 @@ const CognitiveTests: React.FC = () => {
   // Results
   const [testResult, setTestResult] = useState<CognitiveTestResult | null>(null);
 
-  // Memory Test
+  // --- TEST PHASE 1: MEMORY RECALL ---
+  // We randomly pick 8 unique words from a dictionary pool.
+  // The user must watch them appear one-by-one and try to memorize the sequence.
   const startMemoryTest = () => {
     const words = [...WORDS_POOL].sort(() => Math.random() - 0.5).slice(0, 8);
     setMemoryWords(words);
@@ -84,13 +86,20 @@ const CognitiveTests: React.FC = () => {
     }, delay);
   };
 
+  /**
+   * --- TEST PHASE 2: REACTION TIME ---
+   * A 'Wait...' signal appears for a random duration (2-5 seconds).
+   * When it turns GREEN, the user must click as fast as possible.
+   * We calculate the difference in Milliseconds.
+   */
   const handleReactionClick = () => {
     if (phase === 'reaction-click') {
-      const time = Date.now() - reactionStart;
+      const time = Date.now() - reactionStart; // Current time - Start time = Reaction speed
       const newTrials = [...reactionTrials, time];
       setReactionTrials(newTrials);
       const count = trialCount + 1;
       setTrialCount(count);
+      // We perform 5 distinct trials to get a stable average
       if (count >= 5) {
         setPhase('reaction-done');
       } else {
@@ -129,13 +138,26 @@ const CognitiveTests: React.FC = () => {
     }
   };
 
+  /**
+   * --- FINAL SCORING & FUSION ---
+   * This is the "Mathematical Core" of the Cognitive module.
+   * We normalize all 3 tests into a single 0-100% score.
+   */
   const finishAllTests = useCallback(() => {
     if (!user) return;
 
+    // SCORING LOGIC:
+    // 1. Memory: Percentage of words correctly recalled.
     const memoryScore = Math.round((recalledWords.filter(w => memoryWords.map(m => m.toLowerCase()).includes(w.toLowerCase())).length / memoryWords.length) * 100);
+    
+    // 2. Reaction: We assume 200ms is perfect (100%). Every 5ms slower drops the score by 1%.
     const avgReaction = reactionTrials.length > 0 ? reactionTrials.reduce((a, b) => a + b, 0) / reactionTrials.length : 999;
     const reactionScore = Math.max(0, Math.min(100, 100 - (avgReaction - 200) / 5));
+    
+    // 3. Verbal: Each animal named gives 5 points (Max 20 animals for 100%).
     const verbalScore = Math.min(100, verbalWords.length * 5);
+    
+    // AVERAGE: The final "Cognitive Baseline" for this user.
     const overallScore = Math.round((memoryScore + reactionScore + verbalScore) / 3);
 
     const cogResult: CognitiveTestResult = {

@@ -38,9 +38,15 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
   },
 };
 
+/**
+ * --- CORE AUTHENTICATION ENGINE ---
+ * This manages who is logged in and what they can see.
+ * We use a "Local Strategy" so you don't need a database during the demo.
+ */
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
+  // When you open the tab, we check if you were already logged in (Persistence)
   useEffect(() => {
     const stored = localStorage.getItem('neurosense_user');
     if (stored) {
@@ -56,6 +62,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
+  /**
+   * --- LOGIN LOGIC ---
+   * 1. First checks our hardcoded DEMO_USERS (patient@neurosense.ai).
+   * 2. If not found, checks the 'neurosense_users' list in your browser's local memory.
+   */
   const login = async (email: string, password: string): Promise<boolean> => {
     const demo = DEMO_USERS[email];
     if (demo && demo.password === password) {
@@ -93,13 +104,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('neurosense_user');
   };
 
+  /**
+   * --- UPDATE NAME ---
+   * Allows the patient to personalize their clinical identifier (Active Identifier).
+   */
   const updateName = (newName: string) => {
     if (!user) return;
     const updatedUser = { ...user, name: newName };
     setUser(updatedUser);
     localStorage.setItem('neurosense_user', JSON.stringify(updatedUser));
     
-    // Also update in registered users if exists
+    // Also update in registered users if exists to keep records consistent
     const stored = localStorage.getItem('neurosense_users');
     if (stored) {
       const users = JSON.parse(stored);

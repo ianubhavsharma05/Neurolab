@@ -12,23 +12,28 @@ const Heatmap: React.FC<HeatmapProps> = ({ data = [], size = 300 }) => {
   const cellW = cols > 0 ? size / cols : 0;
   const cellH = rows > 0 ? size / rows : 0;
 
+  /**
+   * --- COLOR MAPPING LOGIC ---
+   * This maps a single number (0.0 to 1.0) into a "Thermal Color".
+   * Non-Demented regions = Dark Blue / Cyan
+   * High-Risk Anomaly regions = Orange / Bright Red
+   */
   const getColor = (val: number) => {
-    // Proper heat colormap: dark blue -> cyan -> yellow -> red
     const clamped = Math.max(0, Math.min(1, val));
     if (clamped < 0.25) {
-      // Dark blue to cyan
+      // PHASE 1: Deep Blue (Cold - No Anomaly)
       const t = clamped / 0.25;
       return `rgba(${Math.round(0 + t * 100)}, ${Math.round(50 + t * 150)}, ${Math.round(200 - t * 100)}, 0.8)`;
     } else if (clamped < 0.5) {
-      // Cyan to yellow
+      // PHASE 2: Cyan to Low Green
       const t = (clamped - 0.25) / 0.25;
       return `rgba(${Math.round(100 + t * 155)}, ${Math.round(200 - t * 50)}, ${Math.round(100 - t * 100)}, 0.8)`;
     } else if (clamped < 0.75) {
-      // Yellow to orange
+      // PHASE 3: Yellow to Healthy Orange
       const t = (clamped - 0.5) / 0.25;
       return `rgba(255, ${Math.round(150 - t * 100)}, 0, 0.8)`;
     } else {
-      // Orange to red
+      // PHASE 4: Deep Red (Hot - High Anomaly detected by Grad-CAM)
       const t = (clamped - 0.75) / 0.25;
       return `rgba(255, ${Math.round(50 - t * 50)}, 0, 0.8)`;
     }
