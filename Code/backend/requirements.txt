@@ -1,10 +1,9 @@
-# ── PyTorch CPU-only (must be fetched from pytorch whl index) ──────────────────
-# These +cpu variants are resolved via --extra-index-url in Dockerfile
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
-torchaudio==2.2.2+cpu
+# NOTE: torch, torchvision, torchaudio are installed separately in the Dockerfile
+#       via --index-url https://download.pytorch.org/whl/cpu (CPU-only wheels)
+# NOTE: grad-cam is installed with --no-deps in the Dockerfile to prevent
+#       its opencv-python dep from conflicting with opencv-python-headless
 
-# ── Numpy: MUST be <2.0 — PyTorch 2.2.x and grad-cam are incompatible with numpy 2.x ──
+# ── Numpy: MUST be 1.x — PyTorch 2.2.x is incompatible with numpy 2.x ────────
 numpy==1.26.4
 
 # ── Application dependencies ───────────────────────────────────────────────────
@@ -16,7 +15,10 @@ joblib==1.4.2
 scikit-learn==1.4.2
 opencv-python-headless==4.9.0.80
 pillow==10.3.0
-grad-cam==1.4.8
 matplotlib==3.9.0
 pydantic==2.7.1
 python-dotenv==1.0.1
+
+# Dependencies for grad-cam (since we install it with --no-deps)
+ttach==0.0.3
+tqdm

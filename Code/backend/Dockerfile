@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.11-slim
 
 # Install system dependencies for OpenCV and audio processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -11,21 +11,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy requirements first (for Docker layer caching)
+# Create a constraints file to prevent ANY package from upgrading numpy
+RUN echo "numpy<2.0" > /tmp/constraints.txt
+
+# Copy and install core requirements first
 COPY requirements.txt .
+RUN pip install --no-cache-dir -c /tmp/constraints.txt -r requirements.txt
 
-# Install ALL packages in ONE atomic pip call.
-# --extra-index-url makes the PyTorch CPU wheels (torch==2.2.2+cpu etc.) resolvable.
-# Pip resolves the full dependency graph at once — no more numpy overwrites
-# between separate RUN steps.
-RUN pip install --no-cache-dir \
-    --extra-index-url https://download.pytorch.org/whl/cpu \
-    -r requirements.txt
+# Install PyTorch CPU-only explicitly from its own index
+RUN pip install --no-cache-dir -c /tmp/constraints.txt \
+    --index-url https://download.pytorch.org/whl/cpu \
+    torch==2.2.2+cpu \
+    torchvision==0.17.2+cpu \
+    torchaudio==2.2.2+cpu
 
-# Hard re-pin numpy==1.26.4 as a safety net in case any transitive dep upgraded it
-RUN pip install --no-cache-dir --force-reinstall "numpy==1.26.4"
+# Install grad-cam WITH --no-deps to prevent it from pulling `opencv-python` 
+# Which conflicts with our already-installed `opencv-python-headless`
+RUN pip install --no-cache-dir --no-deps grad-cam==1.4.8
 
-# Verify both numpy and torch import cleanly at build time
+# Final sanity check at build time
 RUN python -c " \
 import numpy; \
 print('numpy version:', numpy.__version__); \
@@ -33,6 +37,10 @@ assert numpy.__version__.startswith('1.'), f'FATAL: numpy {numpy.__version__} in
 import torch; \
 print('torch version:', torch.__version__); \
 print('numpy available in torch:', torch.is_floating_point(torch.tensor([1.0]))); \
+import cv2; \
+print('cv2 version:', cv2.__version__); \
+from pytorch_grad_cam import GradCAM; \
+print('grad-cam successfully imported'); \
 "
 
 # Copy application code and models
