@@ -18,9 +18,9 @@ RUN echo "numpy<2.0" > /tmp/constraints.txt
 COPY requirements.txt .
 RUN pip install --no-cache-dir -c /tmp/constraints.txt -r requirements.txt
 
-# Install PyTorch CPU-only explicitly from its own index
+# Install PyTorch CPU-only explicitly from its own index (while allowing PyPI for dependencies)
 RUN pip install --no-cache-dir -c /tmp/constraints.txt \
-    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
     torch==2.2.2+cpu \
     torchvision==0.17.2+cpu \
     torchaudio==2.2.2+cpu
