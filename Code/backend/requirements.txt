@@ -1,9 +1,6 @@
-# NOTE: torch, torchvision, torchaudio are installed separately in the Dockerfile
-#       via --index-url https://download.pytorch.org/whl/cpu (CPU-only wheels)
-# NOTE: grad-cam is installed with --no-deps in the Dockerfile to prevent
-#       its opencv-python dep from conflicting with opencv-python-headless
+--extra-index-url https://download.pytorch.org/whl/cpu
 
-# ── Numpy: 2.x is REQUIRED for unpickling the 2026 speech model ────────────────
+# ── Numpy: REQUIRED for unpickling the 2026 speech model ───────────────────────
 numpy==2.4.3
 
 # ── Application dependencies ───────────────────────────────────────────────────
@@ -20,10 +17,11 @@ matplotlib==3.7.1
 pydantic==2.7.1
 python-dotenv==1.0.1
 
-# ── AI Core Dependencies ───────────────────────────────────────────────────────
-# NOTE: these are CPU-only versions for Render/Railway, set up correctly here
-torch>=2.2.0
-torchvision>=0.17.0
-grad-cam==1.5.0
+# ── AI Core Dependencies (CPU Optimized for Render/Railway/Vercel) ─────────────
+# IMPORTANT: These versions are strictly coordinated with the Dockerfile
+torch==2.3.0+cpu
+torchvision==0.18.0+cpu
+torchaudio==2.3.0+cpu
+grad-cam==1.4.8
 ttach==0.0.3
 tqdm
