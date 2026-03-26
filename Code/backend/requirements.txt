@@ -1,7 +1,9 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Numpy: REQUIRED for unpickling the 2026 speech model ───────────────────────
-numpy==2.4.3
+# IMPORTANT: Pinning to < 2.0.0 because Scikit-Learn 1.2.2 and Matplotlib 3.7 
+# are incompatible with the new Numpy 2.0 binary architecture.
+numpy==1.26.4
 
 # ── Application dependencies ───────────────────────────────────────────────────
 fastapi==0.111.0
