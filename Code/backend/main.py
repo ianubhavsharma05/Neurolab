@@ -91,15 +91,15 @@ if os.path.exists(SPEECH_MODEL_PATH):
     print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
     # Compatibility patch for scikit-learn _loss module mismatch
     try:
-        # For sklearn 1.1.x / 1.2.x, GB losses are in ensemble._gb_losses
+        # In sklearn 1.2.2, Gradient Boosting losses are in ensemble._gb_losses
         import sklearn.ensemble._gb_losses as gb_losses
-        
-        # Force map the top-level '_loss' that the pickler is looking for
         sys.modules['_loss'] = gb_losses
-        
-        # Also ensure 'sklearn._loss' points there if the pickler is using absolute paths
         sys.modules['sklearn._loss'] = gb_losses
         
+        # If the class name itself is slightly different in this version
+        if not hasattr(gb_losses, 'CyHalfBinomialLoss') and hasattr(gb_losses, 'BinomialDeviance'):
+            setattr(gb_losses, 'CyHalfBinomialLoss', gb_losses.BinomialDeviance)
+            
         print(f"[DEBUG] Successfully mapped _loss to {gb_losses.__name__}")
     except ImportError:
         print("[DEBUG] Could not find sklearn.ensemble._gb_losses for shim")
