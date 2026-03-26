@@ -1,4 +1,5 @@
 import base64
+import gc
 import os
 import tempfile
 import uuid
@@ -14,6 +15,9 @@ import torchvision.models as models
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
+
+# Optimize PyTorch for shared CPU environments (Render/Railway)
+torch.set_num_threads(1)
 from pydantic import BaseModel, Field
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -26,8 +30,11 @@ CORS_ORIGINS = os.environ.get(
     "http://localhost:5173,http://localhost:4173"
 ).split(",")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-MRI_MODEL_PATH = "models/final_model.pth"
-SPEECH_MODEL_PATH = "models/speech_model.pkl"
+
+# Use absolute paths anchored to this file so the server works from any CWD
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MRI_MODEL_PATH = os.path.join(_BASE_DIR, "models", "final_model.pth")
+SPEECH_MODEL_PATH = os.path.join(_BASE_DIR, "models", "speech_model.pkl")
 
 MRI_CLASS_NAMES = ["MildDemented", "ModerateDemented", "NonDemented", "VeryMildDemented"]
 MRI_LABEL_MAP = {
@@ -62,21 +69,43 @@ class RiskRequest(BaseModel):
     speech_score: float = Field(..., ge=0, le=100)
     cognitive_score: float = Field(..., ge=0, le=100)
 
+mri_load_error = None
+speech_load_error = None
+
 def load_mri_model():
-    model = models.resnet18(weights=None)
-    num_features = model.fc.in_features
-    model.fc = nn.Linear(num_features, 4)
-    if not os.path.exists(MRI_MODEL_PATH):
-        raise RuntimeError(
-            f"MRI model not found at {MRI_MODEL_PATH}. "
-            "Download final_model.pth and place it in models/ folder."
-        )
-    model.load_state_dict(torch.load(MRI_MODEL_PATH, map_location=DEVICE))
-    model = model.to(DEVICE)
-    model.eval()
-    return model
+    global mri_load_error
+    try:
+        model = models.resnet18(weights=None)
+        num_features = model.fc.in_features
+        model.fc = nn.Linear(num_features, 4)
+        if not os.path.exists(MRI_MODEL_PATH):
+            raise RuntimeError(
+                f"MRI model not found at {MRI_MODEL_PATH}. "
+                "Download final_model.pth and place it in models/ folder."
+            )
+        model.load_state_dict(torch.load(MRI_MODEL_PATH, map_location=DEVICE))
+        model = model.to(DEVICE)
+        model.eval()
+        print("[DEBUG] MRI model loaded successfully!")
+        return model
+    except Exception as e:
+        mri_load_error = str(e)
+        import traceback
+        traceback.print_exc()
+        return None
 
 mri_model = load_mri_model()
+
+# --- HEATMAP SINGLETON ---
+# Initializing GradCAM once at startup to save RAM and CPU overhead
+gradcam_singleton = None
+if mri_model:
+    try:
+        target_layer = mri_model.layer4[-1]
+        gradcam_singleton = GradCAM(model=mri_model, target_layers=[target_layer])
+        print("[DEBUG] GradCAM singleton initialized!")
+    except Exception as e:
+        print(f"[DEBUG] GradCAM initialization failed: {e}")
 
 # Environment Check for Debugging
 try:
@@ -92,18 +121,22 @@ if os.path.exists(SPEECH_MODEL_PATH):
         speech_model = joblib.load(SPEECH_MODEL_PATH)
         print("[DEBUG] Speech model loaded successfully!")
     except Exception as e:
+        speech_load_error = str(e)
         print(f"[DEBUG] FAILED to load speech model: {e}")
         import traceback
         traceback.print_exc()
+else:
+    speech_load_error = f"Model file not found at {SPEECH_MODEL_PATH}"
+    print(f"[DEBUG] Speech model path does not exist: {SPEECH_MODEL_PATH}")
 
 # --- UTILITY FUNCTIONS ---
 
-def generate_gradcam(model, input_tensor):
+def generate_gradcam(input_tensor):
     try:
-        target_layer = model.layer4[-1]
-        # GradCAM REQUIRES gradients — must be called outside torch.no_grad()
-        cam = GradCAM(model=model, target_layers=[target_layer])
-        grayscale_cam = cam(input_tensor=input_tensor)[0]
+        if not gradcam_singleton:
+            return [[0.0] * 16 for _ in range(16)]
+            
+        grayscale_cam = gradcam_singleton(input_tensor=input_tensor)[0]
         
         heatmap_data = []
         cam_resized = cv2.resize(grayscale_cam, (16, 16))
@@ -174,7 +207,11 @@ async def analyze_mri(file: UploadFile = File(...)):
         # GradCAM runs OUTSIDE no_grad — it needs gradients enabled
         # A fresh tensor copy ensures the computation graph is available
         gradcam_tensor = MRI_TRANSFORM(image).unsqueeze(0).to(DEVICE)
-        heatmap_data = generate_gradcam(mri_model, gradcam_tensor)
+        heatmap_data = generate_gradcam(gradcam_tensor)
+        
+        # Free memory explicitly
+        del input_tensor, gradcam_tensor, content, image
+        gc.collect()
 
         return {
             "id": str(uuid.uuid4()),
@@ -201,7 +238,8 @@ async def analyze_mri(file: UploadFile = File(...)):
 @app.post("/analyze-speech")
 async def analyze_speech(file: UploadFile = File(...)):
     if not speech_model:
-        raise HTTPException(status_code=503, detail="Speech model not found.")
+        error_msg = f"Speech model not found. Detail: {speech_load_error or 'Unknown error during startup'}"
+        raise HTTPException(status_code=503, detail=error_msg)
         
     temp_audio_path = ""
     try:
@@ -235,6 +273,7 @@ async def analyze_speech(file: UploadFile = File(...)):
     finally:
         if os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
+        gc.collect()
 
 @app.post("/calculate-risk")
 async def calculate_risk(request: RiskRequest):
@@ -259,7 +298,15 @@ async def root():
 
 @app.get("/health")
 async def health():
-    return {"status": "synchronized", "mri_loaded": mri_model is not None, "speech_loaded": speech_model is not None}
+    return {
+        "status": "synchronized",
+        "mri_loaded": mri_model is not None,
+        "mri_error": mri_load_error,
+        "speech_loaded": speech_model is not None,
+        "speech_error": speech_load_error,
+        "cwd": os.getcwd(),
+        "base_dir": _BASE_DIR
+    }
 
 if __name__ == "__main__":
     import uvicorn
