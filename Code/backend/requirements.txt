@@ -3,8 +3,8 @@
 # NOTE: grad-cam is installed with --no-deps in the Dockerfile to prevent
 #       its opencv-python dep from conflicting with opencv-python-headless
 
-# ── Numpy: MUST be 1.x — PyTorch 2.2.x is incompatible with numpy 2.x ────────
-numpy==1.26.4
+# ── Numpy: 2.x is REQUIRED for unpickling the 2026 speech model ────────────────
+numpy==2.4.3
 
 # ── Application dependencies ───────────────────────────────────────────────────
 fastapi==0.111.0
