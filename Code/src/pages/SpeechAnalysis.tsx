@@ -72,42 +72,50 @@ const SpeechAnalysis: React.FC = () => {
         reset: 'Reset Acoustic Core',
       };
 
-  // Helper to convert audio buffer to true WAV format
+  /**
+   * --- HELPER: audioBufferToWav ---
+   * PURPOSE: This is a mathematical "transcoder". 
+   * Browsers record audio in '.webm' or '.mp4' formats. These are COMPRESSED containers.
+   * Our Python Backend (Librosa) needs raw '.wav' (PCM) to analyze Jitter/Shimmer.
+   * This function manually builds a WAV file byte-by-byte from raw sound signals.
+   */
   const audioBufferToWav = (buffer: AudioBuffer): Blob => {
-    const interleaved = buffer.getChannelData(0); // Take first channel (mono) for analysis
+    const interleaved = buffer.getChannelData(0); // Take first channel (mono)
     const dataLength = interleaved.length * 2;
-    const arrayBuffer = new ArrayBuffer(44 + dataLength);
+    const arrayBuffer = new ArrayBuffer(44 + dataLength); // 44 bytes is the standard WAV 'Header' size
     const view = new DataView(arrayBuffer);
 
+    // Writes the text strings required in a WAV header
     const writeString = (view: DataView, offset: number, str: string) => {
       for (let i = 0; i < str.length; i++) {
         view.setUint8(offset + i, str.charCodeAt(i));
       }
     };
 
-    // RIFF chunk descriptor
+    // RIFF chunk descriptor: Tells the computer this is a valid audio file
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataLength, true);
     writeString(view, 8, 'WAVE');
     
-    // fmt sub-chunk
+    // fmt sub-chunk: Defines the quality (Sample Rate, Mono vs Stereo)
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
-    view.setUint16(20, 1, true); // PCM
-    view.setUint16(22, 1, true); // Mono
-    view.setUint32(24, buffer.sampleRate, true); // Sample rate
-    view.setUint32(28, buffer.sampleRate * 2, true); // Byte rate
-    view.setUint16(32, 2, true); // Block align
-    view.setUint16(34, 16, true); // Bits per sample
+    view.setUint16(20, 1, true); // PCM Encoding
+    view.setUint16(22, 1, true); // Mono (Single Mic)
+    view.setUint32(24, buffer.sampleRate, true); 
+    view.setUint32(28, buffer.sampleRate * 2, true); 
+    view.setUint16(32, 2, true); 
+    view.setUint16(34, 16, true); // 16-bit audio depth
     
-    // data sub-chunk
+    // data sub-chunk: The actual sound vibrations
     writeString(view, 36, 'data');
     view.setUint32(40, dataLength, true);
     
-    // Write PCM samples
+    // Write the raw Sound Waves (PCM samples)
     let offset = 44;
     for (let i = 0; i < interleaved.length; i++) {
       let s = Math.max(-1, Math.min(1, interleaved[i]));
+      // Convert decimal waves into 16-bit Integer waves
       view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
       offset += 2;
     }
@@ -115,29 +123,43 @@ const SpeechAnalysis: React.FC = () => {
     return new Blob([view], { type: 'audio/wav' });
   };
 
+  /**
+   * --- FUNCTION: startRecording ---
+   * Starts the Microphone and begins listening to your voice patterns.
+   */
   const startRecording = async () => {
     try {
+      // 1. Ask browser for permission to use the Mic
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorder.current = new MediaRecorder(stream);
       chunks.current = [];
+      
+      // 2. As sound comes in, we save it in small chunks
       mediaRecorder.current.ondataavailable = e => chunks.current.push(e.data);
+      
       mediaRecorder.current.onstop = async () => {
-        stream.getTracks().forEach(t => t.stop());
+        stream.getTracks().forEach(t => t.stop()); // Turn off the "Recording" red light in the browser
         const originalBlob = new Blob(chunks.current);
         
         try {
-          // Convert WebM/MP4 into a True WAV file to ensure compatibility on Vercel Backend
-          // since Vercel Lambda does not have ffmpeg to demux WebM formats.
+          /**
+           * CRITICAL STEP: Vercel/Cloud Fix
+           * Vercel's serverless backend DOES NOT have 'ffmpeg' installed. 
+           * If we send a 'WebM' file from Chrome, the server can't read it.
+           * So, we decode the audio in YOUR browser and send a "True WAV" instead.
+           */
           const arrayBuffer = await originalBlob.arrayBuffer();
           const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-          const wavBlob = audioBufferToWav(audioBuffer);
-          setAudioBlob(wavBlob);
+          
+          const wavBlob = audioBufferToWav(audioBuffer); // Convert to WAV
+          setAudioBlob(wavBlob); // Ready for analysis
         } catch (err) {
           console.error('[Speech] Conversion to true WAV failed:', err);
           setAudioBlob(new Blob(chunks.current, { type: 'audio/wav' })); // fallback
         }
       };
+      
       mediaRecorder.current.start();
       setRecording(true);
     } catch {

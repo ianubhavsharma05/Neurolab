@@ -58,19 +58,28 @@ const MRIUpload: React.FC = () => {
         drop: 'Drop MRI Scan here or browse',
       };
 
+  // --- STEP 1: SELECTING THE FILE ---
+  // When you click the upload box, this function runs.
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+    const f = e.target.files?.[0]; // Get the first file selected
     if (f) {
-      setFile(f);
+      setFile(f); // Store the physical file in "state"
       const reader = new FileReader();
+      // Generate a "Preview Image" so the user can see their brain scan on screen
       reader.onloadend = () => setPreview(reader.result as string);
       reader.readAsDataURL(f);
-      setResult(null);
+      setResult(null); // Clear any old results
     }
   };
 
+  /**
+   * --- STEP 2: THE BRAIN ANALYSIS ENGINE ---
+   * This is the bridge to the ResNet-18 Neural Network.
+   */
   const analyze = async () => {
-    if (!file || !user) return;
+    if (!file || !user) return; // Can't analyze if no file or no logged-in user
+    
+    // Security check: Only allow standard images (JPEG/PNG)
     if (!file.type.startsWith('image/') || file.type === 'image/dicom') {
       toast.error('Please upload a valid MRI image (JPEG/PNG)');
       return;
@@ -79,28 +88,34 @@ const MRIUpload: React.FC = () => {
     setAnalyzing(true);
     setProgress(0);
 
+    // VISUAL EFFECT: We simulate a progress bar to show the "Neural Core" is working.
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 400);
 
     try {
-      const analysis = await uploadMRI(file);
+      // THE MOST IMPORTANT LINE: We send the image to the Python FastAPI backend.
+      const analysis = await uploadMRI(file); 
+      
       clearInterval(interval);
-      setProgress(100);
+      setProgress(100); // Analysis finished successfully
 
+      // --- STEP 3: MAPPING THE RESULTS ---
+      // We take the raw numbers from the AI and turn them into a 'Result' object.
       const mriResult: MRIResult = {
         id: uuidv4(),
         userId: user.id,
         date: new Date().toISOString(),
-        precisionScore: analysis.confidence,
-        modelAccuracy: analysis.modelAccuracy,
-        classification: analysis.classification,
+        precisionScore: analysis.confidence, // Probability from Softmax (0 to 100)
+        modelAccuracy: analysis.modelAccuracy, // Static metric (85.4%)
+        classification: analysis.classification, // "Non-Demented", "Mild", or "Demented"
         imageUrl: preview,
-        heatmapData: analysis.heatmapData,
-        findings: analysis.findings || [],
-        metadata: analysis.metadata || {},
+        heatmapData: analysis.heatmapData, // The Grad-CAM "Glow" points for the Brain Heatmap
+        findings: analysis.findings || [], // List of clinical biomarkers detected
+        metadata: analysis.metadata || {}, // Technical info like Image Dimensions
       };
 
+      // We save this permanently into the browser's storage
       dataStore.saveMRIResult(user.id, mriResult);
-      setResult(mriResult);
+      setResult(mriResult); // Display the results on the screen
       toast.success('MRI analysis complete');
     } catch (error: any) {
       toast.error(error.message || 'Analysis failed');
