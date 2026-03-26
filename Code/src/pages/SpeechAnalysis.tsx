@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Mic, Upload, Loader2, CheckCircle, Square, ArrowRight, Activity, Music, Share2 } from 'lucide-react';
 import StaggeredHeading from '@/components/ui/StaggeredHeading';
-import { uploadSpeech } from '@/services/api';
+import { uploadSpeech, checkServerStatus } from '@/services/api';
 import { dataStore } from '@/store/dataStore';
 import RiskGauge from '@/components/ui/RiskGauge';
 import Waveform from '@/components/ui/Waveform';
@@ -197,6 +197,13 @@ const SpeechAnalysis: React.FC = () => {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 20, 95)), 400);
 
     try {
+      // WAKE UP CHECK: Detect if the Railway/Render server is currently "sleeping".
+      // Since speech analysis is heavy (Librosa + Scikit-Learn), a cold start can cause a timeout.
+      const isLive = await checkServerStatus();
+      if (!isLive) {
+        toast.info("Acoustic Core is waking up... (Render/Railway Free Tier window initiated)");
+      }
+
       const analysis = await uploadSpeech(audioBlob);
       clearInterval(interval);
       setProgress(100);

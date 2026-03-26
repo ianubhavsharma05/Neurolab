@@ -8,6 +8,20 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 console.log(`[API] Initialized with Base URL: ${API_BASE_URL}`);
 
 /**
+ * --- UTILITY: checkServerStatus ---
+ * PURPOSE: Since we use Free Tiers (Render/Railway), the server sleeps during inactivity.
+ * This pings the /health endpoint to "wake it up" before the user starts a heavy 10-second analysis.
+ */
+export const checkServerStatus = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/health`);
+    return response.ok;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * FUNCTION: uploadMRI
  * Takes: A physical brain image file from the user's computer.
  * Action: Packages it into a 'FormData' format (which browsers use to send files) and sends it to the /analyze-mri endpoint.

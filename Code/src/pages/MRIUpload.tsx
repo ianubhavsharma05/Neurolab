@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { Brain, Upload, Loader2, CheckCircle, AlertCircle, Play, Info } from 'lucide-react';
 import StaggeredHeading from '@/components/ui/StaggeredHeading';
-import { uploadMRI } from '@/services/api';
+import { uploadMRI, checkServerStatus } from '@/services/api';
 import { dataStore } from '@/store/dataStore';
 import RiskGauge from '@/components/ui/RiskGauge';
 import Heatmap from '@/components/ui/Heatmap';
@@ -92,6 +92,12 @@ const MRIUpload: React.FC = () => {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 15, 90)), 400);
 
     try {
+      // WAKE UP CHECK: Detect if the Railway/Render server is currently "sleeping".
+      const isLive = await checkServerStatus();
+      if (!isLive) {
+        toast.info("Backend is waking up from sleep (Render/Railway Free Tier)... Please wait 15-20 seconds.");
+      }
+
       // THE MOST IMPORTANT LINE: We send the image to the Python FastAPI backend.
       const analysis = await uploadMRI(file); 
       
