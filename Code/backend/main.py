@@ -91,18 +91,18 @@ if os.path.exists(SPEECH_MODEL_PATH):
     print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
     # Compatibility patch for scikit-learn _loss module mismatch
     try:
-        try:
-            # For sklearn >= 1.3
-            import sklearn._loss as sklearn_loss
-            print(f"[DEBUG] Found sklearn._loss at {sklearn_loss.__file__}")
-            sys.modules['_loss'] = sklearn_loss
-        except ImportError:
-            # For sklearn < 1.3 (e.g. 1.1, 1.2) - map to ensemble losses
-            import sklearn.ensemble._gb_losses as sklearn_loss
-            print(f"[DEBUG] Mapping _loss to sklearn.ensemble._gb_losses")
-            sys.modules['_loss'] = sklearn_loss
+        # For sklearn 1.1.x / 1.2.x, GB losses are in ensemble._gb_losses
+        import sklearn.ensemble._gb_losses as gb_losses
+        
+        # Force map the top-level '_loss' that the pickler is looking for
+        sys.modules['_loss'] = gb_losses
+        
+        # Also ensure 'sklearn._loss' points there if the pickler is using absolute paths
+        sys.modules['sklearn._loss'] = gb_losses
+        
+        print(f"[DEBUG] Successfully mapped _loss to {gb_losses.__name__}")
     except ImportError:
-        print("[DEBUG] Failed to map _loss module")
+        print("[DEBUG] Could not find sklearn.ensemble._gb_losses for shim")
     
     try:
         speech_model = joblib.load(SPEECH_MODEL_PATH)
