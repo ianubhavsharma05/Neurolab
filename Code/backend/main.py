@@ -1,7 +1,6 @@
 import base64
 import os
 import tempfile
-import sys
 import uuid
 from io import BytesIO
 
@@ -89,21 +88,6 @@ except ImportError:
 speech_model = None
 if os.path.exists(SPEECH_MODEL_PATH):
     print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
-    # Compatibility patch for scikit-learn _loss module mismatch
-    try:
-        # In sklearn 1.2.2, Gradient Boosting losses are in ensemble._gb_losses
-        import sklearn.ensemble._gb_losses as gb_losses
-        sys.modules['_loss'] = gb_losses
-        sys.modules['sklearn._loss'] = gb_losses
-        
-        # If the class name itself is slightly different in this version
-        if not hasattr(gb_losses, 'CyHalfBinomialLoss') and hasattr(gb_losses, 'BinomialDeviance'):
-            setattr(gb_losses, 'CyHalfBinomialLoss', gb_losses.BinomialDeviance)
-            
-        print(f"[DEBUG] Successfully mapped _loss to {gb_losses.__name__}")
-    except ImportError:
-        print("[DEBUG] Could not find sklearn.ensemble._gb_losses for shim")
-    
     try:
         speech_model = joblib.load(SPEECH_MODEL_PATH)
         print("[DEBUG] Speech model loaded successfully!")
