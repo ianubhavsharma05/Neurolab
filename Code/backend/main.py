@@ -1,6 +1,7 @@
 import base64
 import os
 import tempfile
+import sys
 import uuid
 from io import BytesIO
 
@@ -80,6 +81,12 @@ mri_model = load_mri_model()
 
 speech_model = None
 if os.path.exists(SPEECH_MODEL_PATH):
+    # Compatibility patch for scikit-learn _loss module mismatch
+    try:
+        import sklearn._loss as sklearn_loss
+        sys.modules['_loss'] = sklearn_loss
+    except ImportError:
+        pass
     speech_model = joblib.load(SPEECH_MODEL_PATH)
 
 # --- UTILITY FUNCTIONS ---
