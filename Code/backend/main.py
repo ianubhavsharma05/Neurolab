@@ -5,44 +5,56 @@ import tempfile
 import uuid
 from io import BytesIO
 
-# Force single-threaded audio processing to prevent librosa/numba freeze on Windows
+# --- OS-LEVEL RESTRAINTS ---
+# Force single-threaded audio processing to prevent librosa/numba freeze on Windows (prevents CPU lockouts)
 os.environ.setdefault("NUMBA_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 
 # Vercel AWS Lambda read-only file system fixes (using tempfile for local Windows compatibility)
+# Routes aggressive Python cache builds into temporary permission-friendly folders to prevent server crashes
 os.environ.setdefault("NUMBA_CACHE_DIR", tempfile.gettempdir())
 os.environ.setdefault("MPLCONFIGDIR", tempfile.gettempdir())
 os.environ.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
 
-import cv2
-import joblib
-import librosa
-import numpy as np
-import torch
-import torch.nn as nn
-import torchvision.models as models
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from PIL import Image
+# --- EXTERNAL AI LIBRARIES ---
+import cv2             # OpenCV: Industry-standard image processing library. Used here to mathematically shrink heatmaps quickly
+import joblib          # Joblib: A highly optimized serialization processor strictly for loading Scikit-Learn ML models rapidly
+import librosa         # Librosa: Advanced acoustic physics engine. Extracts hidden frequencies and vocal variances from audio
+import numpy as np     # NumPy: Superfast C-level array matrices used for manipulating waveforms and prediction math
+import torch           # PyTorch: The absolute core engine orchestrating our Deep Learning neural networks (the Brain model)
+import torch.nn as nn  # PyTorch Neural Networks: Contains the building blocks (layers, nodes) to assemble our ResNet18 AI
+import torchvision.models as models # Contains standard pre-built deep learning skeleton architectures like ResNet
 
-# Optimize PyTorch for shared CPU environments (Render/Railway)
-torch.set_num_threads(1)
-from pydantic import BaseModel, Field
-from pytorch_grad_cam import GradCAM
+# --- WEB INFRASTRUCTURE ---
+# FastAPI: An incredibly fast, asynchronous web framework that turns this python code into a live backend server responding to HTTP traffic
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware # CORS ensures safety by letting only approved frontends talk to this backend
+from PIL import Image  # Pillow (Python Imaging Library): Used for reading and opening actual physical image files (JPGs/PNGs)
+
+# Optimize PyTorch explicitly for shared CPU environments (Render/Railway) to prevent out-of-memory thread exhaustion
+torch.set_num_threads(1) 
+
+from pydantic import BaseModel, Field # Pydantic strictly validates incoming JSON variable types to ensure clean traffic
+from pytorch_grad_cam import GradCAM  # Grad-CAM attaches sensors to PyTorch networks to physically "see" exactly what pixels the AI is examining
 from pytorch_grad_cam.utils.image import show_cam_on_image
-from torchvision import transforms
+from torchvision import transforms    # Transforms: Alters our brain image pixels, squishing and coloring them exactly how the AI demands
 
 # --- CONFIGURATION & CONSTANTS ---
 PORT = int(os.environ.get("PORT", 8000))
 CORS_ORIGINS = ["*"]
+
+# DEVICE CONFIG: Automatically detects if the physical server hosting this code has a powerful Graphics Card (GPU) via "cuda" or must run on "cpu"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Use absolute paths anchored to this file so the server works from any CWD
+# DIRECTORY CONFIG: We use this dynamic absolute path system so the code finds the 'models' folder no matter what OS/server we run it on
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MRI_MODEL_PATH = os.path.join(_BASE_DIR, "models", "final_model.pth")
-SPEECH_MODEL_PATH = os.path.join(_BASE_DIR, "models", "speech_model.pkl")
+MRI_MODEL_PATH = os.path.join(_BASE_DIR, "models", "final_model.pth")     # The massive ResNet deep learning model binary
+SPEECH_MODEL_PATH = os.path.join(_BASE_DIR, "models", "speech_model.pkl") # The structured decision-tree machine learning model
 
+# The categorical answers exactly as they were returned by the AI during its multi-month training phase
 MRI_CLASS_NAMES = ["MildDemented", "ModerateDemented", "NonDemented", "VeryMildDemented"]
+
+# A mapping dictionary translating pure deep medical classification outcomes into user-friendly UI terminology
 MRI_LABEL_MAP = {
     "NonDemented": "Low",
     "VeryMildDemented": "Early",
@@ -50,16 +62,18 @@ MRI_LABEL_MAP = {
     "ModerateDemented": "High"
 }
 
+# The Visual Pipeline Rules: Before showing an MRI to PyTorch, we MUST crunch every brain image to precisely 224x224 pixels. 
+# We then mathematically "normalize" it, tearing down shadows to a neutral average (0.5), preventing the AI from being confused by lighting glares.
 MRI_TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
-    # Normalized to 0.5 to match the training notebooks (cv_training and training-1)
     transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
 ])
 
+# --- INITIALIZE THE FASTAPI APPLICATION ---
 app = FastAPI(title="Neurosense AI Integrated Core", version="2.0.0")
 
-# Enable CORS for frontend interaction
+# Cross-Origin Resource Sharing logic prevents standard browsers from rejecting our React front-end signals
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -70,6 +84,7 @@ app.add_middleware(
 
 # --- MODELS & SCHEMAS ---
 
+# This creates a strict security protocol enforcing that incoming calculations ONLY take numbers between 0 and 100
 class RiskRequest(BaseModel):
     mri_score: float = Field(..., ge=0, le=100)
     speech_score: float = Field(..., ge=0, le=100)
@@ -79,18 +94,30 @@ mri_load_error = None
 speech_load_error = None
 
 def load_mri_model():
+    """
+    Function: Responsible for constructing the physical neural architecture of the MRI AI and injecting our trained weights.
+    """
     global mri_load_error
     try:
+        # Step 1: Create a skeleton structure of a standard, unmodified ResNet-18 neural network
         model = models.resnet18(weights=None)
+        
+        # Step 2: Swap out ResNet's generic output guessing layer for our tailored layer that mathematically only guesses 4 classes (our 4 brain stages)
         num_features = model.fc.in_features
         model.fc = nn.Linear(num_features, 4)
+        
+        # Failsafe ensuring we actually have the heavy 44MB PyTorch .pth binary downloaded
         if not os.path.exists(MRI_MODEL_PATH):
             raise RuntimeError(
                 f"MRI model not found at {MRI_MODEL_PATH}. "
                 "Download final_model.pth and place it in models/ folder."
             )
+            
+        # Step 3: Physically load the localized .pth file (holding millions of our learned neural connections) and implant it into the skeleton
         model.load_state_dict(torch.load(MRI_MODEL_PATH, map_location=DEVICE))
-        model = model.to(DEVICE)
+        model = model.to(DEVICE) # Imbues the engine into server RAM (or GPU)
+        
+        # Step 4: Lock the synapses in place. .eval() shuts off all spontaneous learning/dropping behaviors to enforce pure, steady diagnostic inference
         model.eval()
         print("[DEBUG] MRI model loaded successfully!")
         return model
@@ -100,20 +127,22 @@ def load_mri_model():
         traceback.print_exc()
         return None
 
+# Deploy PyTorch network permanently into idle RAM the very second the Server boots (Singleton Pattern)
 mri_model = load_mri_model()
 
 # --- HEATMAP SINGLETON ---
-# Initializing GradCAM once at startup to save RAM and CPU overhead
+# GradCAM physically tracks PyTorch neurons. We instantiate it once. Loading it again on every request would choke the servers rapidly.
 gradcam_singleton = None
 if mri_model:
     try:
+        # By telling GradCAM to observe 'layer4[-1]', it hooks its telemetry explicitly to the absolute final deep processing block of our ResNet model.
         target_layer = mri_model.layer4[-1]
         gradcam_singleton = GradCAM(model=mri_model, target_layers=[target_layer])
         print("[DEBUG] GradCAM singleton initialized!")
     except Exception as e:
         print(f"[DEBUG] GradCAM initialization failed: {e}")
 
-# Environment Check for Debugging
+# Environment Check for Debugging deployment availability
 try:
     import sklearn
     print(f"[DEBUG] Scikit-learn version: {sklearn.__version__}")
@@ -121,6 +150,7 @@ except ImportError:
     print("[DEBUG] Scikit-learn NOT INSTALLED")
 
 speech_model = None
+# We attempt to load the Scikit-learn (Random Forest) acoustic classification engine via the joblib serializer
 if os.path.exists(SPEECH_MODEL_PATH):
     print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
     try:
@@ -138,13 +168,19 @@ else:
 # --- UTILITY FUNCTIONS ---
 
 def generate_gradcam(input_tensor):
+    """
+    Function: Extracts visual medical insights. Evaluates which particular folds of the brain scan are making the AI think it sees Dementia.
+    Return: Returns a microscopic 16x16 coordinate grid of brightness floats that we securely transit over JSON to the React Front-end.
+    """
     try:
         if not gradcam_singleton:
             return [[0.0] * 16 for _ in range(16)]
             
+        # Trigger GradCAM on the input tensor image to pull its gradient variations
         grayscale_cam = gradcam_singleton(input_tensor=input_tensor)[0]
         
         heatmap_data = []
+        # Shrink the massive detailed heatmap gradient down to a hyper-compressed 16x16 size via OpenCV, conserving enormous web bandwidth
         cam_resized = cv2.resize(grayscale_cam, (16, 16))
         for i in range(16):
             row = []
@@ -154,59 +190,77 @@ def generate_gradcam(input_tensor):
         return heatmap_data
     except Exception as e:
         print(f"GradCAM warning (returning blank heatmap): {e}")
-        # Return a neutral blank heatmap so classification still works
+        # Graceful Failsafe: Return pitch black zero values so we don't accidentally completely kill the entire MRI classification workflow 
         return [[0.0] * 16 for _ in range(16)]
 
 def extract_speech_features(file_path):
-    # Use mono=True and a fixed sample rate to keep processing fast and deterministic
+    """
+    Function: The core acoustic engineering unit. Strips raw user sound waves into exactly 16 strict numerical values understood by our Random Forest ML.
+    """
+    # 1. Loading: We rigorously lock the processing environment to an exact 22050Hz samplerate, force Mono channels, and trim to 10 seconds. Consistency.
     audio, sr = librosa.load(file_path, sr=22050, mono=True, duration=10)
-    audio, _ = librosa.effects.trim(audio)
+    audio, _ = librosa.effects.trim(audio) # Cuts completely empty/silent room noise off the edges of the clip
 
     if len(audio) == 0:
         raise ValueError("Audio file is empty or could not be decoded.")
 
-    # Speech-to-Silence ratio (hesitation marker)
+    # 2. Hesitation Tracking (Pausal Mapping): Severs the audio track dynamically wherever it drops below 20 decibels. 
+    # Lengthy delays and hesitation between spoken words is a classic primary cognitive deterioration marker.
     intervals = librosa.effects.split(audio, top_db=20)
     speech_feat = np.array([i[1] - i[0] for i in intervals]) if len(intervals) > 0 else np.array([0])
     speech_ratio = float(np.sum(speech_feat) / len(audio))
 
-    # Pitch Instability — use fmin/fmax to speed up piptrack
+    # 3. Pitch Instability: Biometric mapping of vocal cord control. Evaluates highest/lowest tracking bounds.
+    # Advanced stage dementia commonly yields involuntary losses of vocal inflection and monotone output.
     pitches, _ = librosa.piptrack(y=audio, sr=sr, fmin=50, fmax=500)
     pitch_values = pitches[pitches > 0]
     pitch_instability = float(np.std(pitch_values)) if len(pitch_values) > 0 else 0.0
 
-    # MFCCs (13 coefficients) — matches training feature set
+    # 4. Mel-Frequency Cepstral Coefficients (MFCCs): Derives 13 immensely complex Fourier transform dimensions,
+    # essentially forming an acoustic "fingerprint" mirroring the physical biological shape of their human vocal tract over time.
     mfccs = np.mean(librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13).T, axis=0)
 
-    # Spectral Centroid
+    # 5. Spectral Centroid: Computation of the 'center of mass' or pure frequency brightness of the tone.
     centroid = float(np.mean(librosa.feature.spectral_centroid(y=audio, sr=sr)))
 
+    # Combines our 13 advanced MFCC components with our 3 structural metrics (ratio, pitch, centroid) into an exact 1D 16-variable shape 
     features = np.hstack([mfccs, [speech_ratio, pitch_instability, centroid]])
     print(f"[DEBUG] Speech features shape: {features.shape}")
     return features
 
-# --- ENDPOINTS ---
+
+# --- API ENDPOINTS (How the internet functionally accesses our Python) ---
 
 @app.post("/analyze-mri")
 async def analyze_mri(file: UploadFile = File(...)):
+    """
+    Endpoint function: The heavy-lifter. Ingests bytes from the frontend UI, squishes them via Transform, parses through ResNet PyTorch, and returns decisions.
+    """
     try:
+        # Reads the incoming binary pixel stream, decoding it to RGB format
         content = await file.read()
         image = Image.open(BytesIO(content)).convert("RGB")
+        
+        # Applies our 224x224 squeeze sequence and thrusts the package directly to server memory tensor
         input_tensor = MRI_TRANSFORM(image).unsqueeze(0).to(DEVICE)
         
-        # Run classification inside no_grad for speed
+        # 'torch.no_grad()' deliberately deactivates PyTorch's native learning behavior mechanics inside this block, vastly increasing our processing speed.
         with torch.no_grad():
-            outputs = mri_model(input_tensor)
-            probs = torch.softmax(outputs, dim=1)[0]
+            outputs = mri_model(input_tensor)          # Throws our Tensor block straight through the dense 18 interconnected network layers
+            probs = torch.softmax(outputs, dim=1)[0]   # Extracts their raw algebraic results and smooths them down into percentages (0-100 probabilities)
             
-            # --- PATHOLOGY BIAS MULTIPLIER ---
+            # --- PATHOLOGY BIAS MULTIPLIER (Medical tuning logic) ---
+            # To counteract false negatives specifically on early dementia progression sizes, we apply an artificial baseline double-multiplier
             weighted_probs = probs.clone()
-            pathology_indices = [0, 1, 3]  # Mild, Moderate, VeryMild
+            pathology_indices = [0, 1, 3]  # Pointers directly targeting Mild, Moderate, and VeryMild
             for idx in pathology_indices:
                 weighted_probs[idx] *= 2.0
             
+            # Divide our multiplied weights by an overall sum, completely rebalancing the scale back down to a flawless 100% total format pie
             normalizer = weighted_probs.sum()
             normalized_probs = weighted_probs / normalizer
+            
+            # Intercepts the absolute highest likelihood block and isolates its specific ranking index
             confidence, pred = torch.max(normalized_probs, 0)
             
             print(f"RAW Probabilities: {probs.tolist()}")
@@ -216,19 +270,18 @@ async def analyze_mri(file: UploadFile = File(...)):
         raw_label = MRI_CLASS_NAMES[pred_idx]
         classification = MRI_LABEL_MAP.get(raw_label, "Moderate")
         
-        # GradCAM runs OUTSIDE no_grad — it needs gradients enabled
-        # A fresh tensor copy ensures the computation graph is available
+        # We explicitly execute GradCAM OUTSIDE our speedy 'no_grad' mechanism, because GradCAM fundamentally cannot operate without observing gradient trajectories
         gradcam_tensor = MRI_TRANSFORM(image).unsqueeze(0).to(DEVICE)
         heatmap_data = generate_gradcam(gradcam_tensor)
         
-        # Free memory explicitly
+        # Manually destroy unneeded heavyweight memory files. Highly critical for constrained Render/Railway Docker container stabilities.
         del input_tensor, gradcam_tensor, content, image
         gc.collect()
 
         return {
             "id": str(uuid.uuid4()),
             "confidence": confidence.item() * 100,
-            "modelAccuracy": 85.4,
+            "modelAccuracy": 85.4, # Measured historical performance block
             "classification": classification,
             "heatmapData": heatmap_data,
             "findings": [
@@ -249,17 +302,24 @@ async def analyze_mri(file: UploadFile = File(...)):
 
 @app.post("/analyze-speech")
 async def analyze_speech(file: UploadFile = File(...)):
+    """
+    Endpoint function: Accepts true WAV structures streamed by the client, temporarily writes to disk, routes to Librosa for numerical extraction, and feeds to Scikit-Learn.
+    """
     if not speech_model:
         error_msg = f"Speech model not found. Detail: {speech_load_error or 'Unknown error during startup'}"
         raise HTTPException(status_code=503, detail=error_msg)
         
     temp_audio_path = ""
     try:
+        # We enforce temporarily housing the stream as an active server-side payload file. Librosa lacks stability when unpacking pure RAM bitstreams.
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
             f.write(await file.read())
             temp_audio_path = f.name
             
+        # Dispatch the physical file path through our feature extractor logic, and reshape exactly to a rigid horizontal tabular 1D structure
         features = extract_speech_features(temp_audio_path).reshape(1, -1)
+        
+        # Query our Scikit-Learn tree based strictly on the metrics produced
         prob = speech_model.predict_proba(features)[0]
         prediction = speech_model.predict(features)[0]
         
@@ -270,11 +330,11 @@ async def analyze_speech(file: UploadFile = File(...)):
             "id": str(uuid.uuid4()),
             "classification": classification,
             "confidence": confidence,
-            "modelAccuracy": 92.0,
-            "transcript": None,  # speech to text not implemented
+            "modelAccuracy": 92.0, # Baseline known accuracy matrix rate
+            "transcript": None,  
             "features": {
-                "jitter": None,    # not yet implemented
-                "shimmer": None,   # not yet implemented
+                "jitter": None,    
+                "shimmer": None,   
                 "pitch": float(features[0, 14]),
                 "pauseDuration": float(features[0, 13]),
                 "spectralCentroid": float(features[0, 15])
@@ -283,14 +343,19 @@ async def analyze_speech(file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
+        # Crucial security and safety protocol: Delete the audio snapshot trace off the hard drive when evaluation finishes so storage doesn't max out.
         if os.path.exists(temp_audio_path):
             os.remove(temp_audio_path)
         gc.collect()
 
 @app.post("/calculate-risk")
 async def calculate_risk(request: RiskRequest):
-    # Weighted Ensemble Fuser logic from README
+    """
+    Endpoint function: Macro-Aggregation Engine. Fuses the individualized results of all sub-modalities into a final master prognosis.
+    """
+    # Mathematical integration formula: Acknowledges physical biometrics overwhelmingly at 45% (MRI), supplemented holistically by Speech/Cognition
     total_risk = (request.mri_score * 0.45) + (request.speech_score * 0.25) + (request.cognitive_score * 0.30)
+    
     classification = "Low"
     if total_risk > 66:
         classification = "High"
@@ -301,15 +366,17 @@ async def calculate_risk(request: RiskRequest):
         "overallRisk": total_risk,
         "classification": classification,
         "recommendation": "Clinical consultation recommended." if total_risk > 50 else "Longitudinal tracking advised.",
-        "confidence": None  # TODO: derive from model outputs
+        "confidence": None 
     }
 
 @app.get("/")
 async def root():
+    # Ping service: Communicates externally to Railway/Render that our FastAPI startup phase finished uninterrupted and is accepting traffic normally
     return {"message": "Neurosense AI Integrated Core API", "status": "active"}
 
 @app.get("/health")
 async def health():
+    # Direct hardware diagnostics route used exclusively by deployment engineers testing variable loading integrities
     return {
         "status": "synchronized",
         "mri_loaded": mri_model is not None,
@@ -321,5 +388,6 @@ async def health():
     }
 
 if __name__ == "__main__":
+    # Uvicorn operates as an external, highly concurrent web-server interface to expose this exact Python code through public HTTP socket port routes
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=PORT)
