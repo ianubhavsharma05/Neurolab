@@ -76,7 +76,13 @@ app = FastAPI(title="Neurosense AI Integrated Core", version="2.0.0")
 # Cross-Origin Resource Sharing logic prevents standard browsers from rejecting our React front-end signals
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    # NOTE: When allow_credentials=True, you CANNOT use "*". You must specify the exact frontend domain.
+    allow_origins=[
+        "http://localhost:5173", 
+        "http://localhost:3000", 
+        "https://neurosense-ai.vercel.app",
+        "https://neurosense-ai-final.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
