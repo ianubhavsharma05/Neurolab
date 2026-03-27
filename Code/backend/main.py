@@ -85,7 +85,8 @@ app.add_middleware(
         "http://localhost:3000", 
         "https://neurosense-ai.vercel.app",
         "https://neurosense-ai-final.vercel.app",
-        "https://neuroscan-ai.vercel.app" # Added as a fallback alias
+        "https://neuroscan-ai.vercel.app",
+        "https://neurosense-ai-git-main-ianubhavsharma05-2903s-projects.vercel.app" # Added deployment-specific URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
