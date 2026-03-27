@@ -197,10 +197,10 @@ const SpeechAnalysis: React.FC = () => {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 20, 95)), 400);
 
     try {
-      // WAKE UP CHECK: Detect if the Railway/Render server is currently "sleeping".
-      // Since speech analysis is heavy (Librosa + Scikit-Learn), a cold start can cause a timeout.
+      // WAKE UP CHECK: Only show cloud wake-up toast on Vercel/Railway, not local dev
+      const isCloudDeployment = !!import.meta.env.VITE_API_URL;
       const isLive = await checkServerStatus();
-      if (!isLive) {
+      if (!isLive && isCloudDeployment) {
         toast.info("Acoustic Core is waking up... (Render/Railway Free Tier window initiated)");
       }
 
