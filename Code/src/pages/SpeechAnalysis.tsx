@@ -199,10 +199,13 @@ const SpeechAnalysis: React.FC = () => {
     try {
       // WAKE UP CHECK: Only show cloud wake-up toast if connecting to a remote server (not localhost)
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const isCloudDeployment = !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1');
-      const isLive = await checkServerStatus();
-      if (!isLive && isCloudDeployment) {
-        toast.info("Acoustic Core is waking up... (Render/Railway Free Tier window initiated)");
+      const isLocal = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+
+      if (!isLocal) {
+        const isLive = await checkServerStatus();
+        if (!isLive) {
+          toast.info("Acoustic Core is waking up... (Render/Railway Free Tier window initiated)");
+        }
       }
 
       const analysis = await uploadSpeech(audioBlob);

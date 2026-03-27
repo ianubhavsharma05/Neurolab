@@ -2,10 +2,13 @@
 // This file acts as the translator between your React interface and your Python backend server.
 
 // VITE_API_URL: This is the web address of your Python server (Render or Railway).
-// If the environment variable isn't set, it failsafe-defaults to your local computer (localhost:8000).
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-console.log(`[API] Initialized with Base URL: ${API_BASE_URL}`);
+if (import.meta.env.DEV) {
+  console.log(`[API] Development Mode: Connecting to ${API_BASE_URL}`);
+} else {
+  console.log(`[API] Production Mode: Connecting to ${API_BASE_URL}`);
+}
 
 /**
  * --- UTILITY: checkServerStatus ---
@@ -15,8 +18,10 @@ console.log(`[API] Initialized with Base URL: ${API_BASE_URL}`);
 export const checkServerStatus = async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/health`);
+    // Local mode should be fast; no need for extended timeout logging here
     return response.ok;
-  } catch {
+  } catch (err) {
+    console.warn('[API] Health check failed. Ensure backend is running at:', API_BASE_URL);
     return false;
   }
 };

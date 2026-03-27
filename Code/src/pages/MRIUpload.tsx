@@ -94,10 +94,14 @@ const MRIUpload: React.FC = () => {
     try {
       // WAKE UP CHECK: Only show cloud wake-up toast if connecting to a remote server (not localhost)
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const isCloudDeployment = !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1');
-      const isLive = await checkServerStatus();
-      if (!isLive && isCloudDeployment) {
-        toast.info("Backend is waking up from sleep (Render/Railway Free Tier)... Please wait 15-20 seconds.");
+      const isLocal = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+
+      // Only check and toast if we are NOT in local mode
+      if (!isLocal) {
+        const isLive = await checkServerStatus();
+        if (!isLive) {
+          toast.info("Backend is waking up from sleep (Render/Railway Free Tier)... Please wait 15-20 seconds.");
+        }
       }
 
       // THE MOST IMPORTANT LINE: We send the image to the Python FastAPI backend.
