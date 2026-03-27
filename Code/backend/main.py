@@ -317,13 +317,18 @@ async def analyze_speech(file: UploadFile = File(...)):
         
     temp_audio_path = ""
     try:
-        # We enforce temporarily housing the stream as an active server-side payload file. Librosa lacks stability when unpacking pure RAM bitstreams.
+        # Log file size to monitor payload limits
+        content = await file.read()
+        print(f"[DEBUG] Received speech file: {file.filename}, Size: {len(content)} bytes")
+        
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-            f.write(await file.read())
+            f.write(content)
             temp_audio_path = f.name
             
+        print(f"[DEBUG] Extracting features from {temp_audio_path}...")
         # Dispatch the physical file path through our feature extractor logic, and reshape exactly to a rigid horizontal tabular 1D structure
         features = extract_speech_features(temp_audio_path).reshape(1, -1)
+        print("[DEBUG] Features extracted successfully.")
         
         # Query our Scikit-Learn tree based strictly on the metrics produced
         prob = speech_model.predict_proba(features)[0]

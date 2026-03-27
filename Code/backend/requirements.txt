@@ -5,17 +5,17 @@
 numpy==2.1.1
 
 # ── Application dependencies ───────────────────────────────────────────────────
-fastapi==0.111.0
-starlette==0.37.2
-uvicorn==0.29.0
-python-multipart==0.0.9
+fastapi>=0.115.0
+starlette>=0.40.0
+uvicorn>=0.30.0
+python-multipart>=0.0.9
 librosa==0.10.2
-joblib==1.4.2
+joblib>=1.4.2
 scikit-learn==1.5.2
 opencv-python-headless==4.10.0.84
 pillow==10.4.0
 matplotlib==3.9.2
-pydantic==2.9.2
+pydantic>=2.9.0
 python-dotenv==1.0.1
 
 # ── AI Core Dependencies (CPU Optimized for Render/Railway/Vercel) ─────────────
