@@ -316,18 +316,35 @@ async def analyze_speech(file: UploadFile = File(...)):
         raise HTTPException(status_code=503, detail=error_msg)
         
     temp_audio_path = ""
+    safe_wav_path = ""
     try:
         # Log file size to monitor payload limits
         content = await file.read()
         print(f"[DEBUG] Received speech file: {file.filename}, Size: {len(content)} bytes")
         
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
             f.write(content)
             temp_audio_path = f.name
             
-        print(f"[DEBUG] Extracting features from {temp_audio_path}...")
+        # SAFETY LAYER: Force transcode via FFmpeg with a hard timeout to prevent endless deadlocks on corrupted browser chunks
+        safe_wav_path = temp_audio_path + "_safe.wav"
+        import subprocess
+        try:
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", temp_audio_path, "-t", "10", "-ar", "22050", "-ac", "1", safe_wav_path],
+                timeout=15,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=400, detail="Audio file decoding timed out. File may be corrupted.")
+        except subprocess.CalledProcessError:
+            raise HTTPException(status_code=400, detail="Failed to decode audio file. Invalid format received.")
+
+        print(f"[DEBUG] Extracting features from {safe_wav_path}...")
         # Dispatch the physical file path through our feature extractor logic, and reshape exactly to a rigid horizontal tabular 1D structure
-        features = extract_speech_features(temp_audio_path).reshape(1, -1)
+        features = extract_speech_features(safe_wav_path).reshape(1, -1)
         print("[DEBUG] Features extracted successfully.")
         
         # Query our Scikit-Learn tree based strictly on the metrics produced
