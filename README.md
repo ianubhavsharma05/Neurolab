@@ -119,3 +119,29 @@
 
 ---
 **Developed efficiently for modern telemedicine diagnostics.**
+
+
+
+That is an incredibly important question! If your app suddenly goes viral and 5 million people hit your Railway Free Tier container at the exact same moment, it will completely crash under the pressure (a classic out-of-memory or timeout failure).
+
+Handling millions of concurrent users doing **heavy AI math operations** requires moving from a "startup" architecture to an "enterprise" architecture. 
+
+Here is exactly what you connect on Railway (and beyond) to prevent that crash:
+
+### 1. Upgrade from Free Tier to a Paid Machine (Vertical Scaling)
+First, you absolutely cannot run 5 million AI scans on a 500 MB RAM free tier server. You would click the Railway dashboard and pay to upgrade your container to a **High-Performance CPU** (e.g., 8-16 vCPUs and 16 GB of RAM). This ensures the AI models process requests in 1 second instead of 30 seconds.
+
+### 2. Auto-Scaling Instances (Horizontal Scaling)
+Even a massive 16-core server will crash if 5 million people hit it at once. In the Railway settings, you can turn on **Auto-Scaling**.
+* Railway will monitor your app. If it sees 5,000 people logging in, Railway will automatically spawn 50 identical copies (clones) of your backend container across their server farm.
+* A "Load Balancer" automatically splits the traffic equally so no single container gets overwhelmed.
+
+### 3. Attach a Queue System (Redis/Celery)
+This is the most critical step for AI apps. You cannot let 5 million people try to execute heavy PyTorch MRI models over a live web socket simultaneously.
+* You connect a **Redis Database** to your backend.
+* When a user uploads an audio file from Vercel, Railway doesn't analyze it instantly. Instead, it drops the file into a "Waiting Line" (the Queue).
+* Your Vercel frontend says *"You are spot #405 in line..."*
+* Your "Worker" servers process the line one by one silently in the background, keeping the servers completely safe from crashing.
+
+### Summary
+To survive a 5-million user spike in the future, you would upgrade your Railway plan to **Auto-Scale multiple containers**, connect a **Redis Queue** so users wait in line during peak traffic instead of crashing the server, and ideally, move to a cloud host that specifically provides **NVIDIA GPUs** (like AWS, Azure, or RunPod) because GPUs calculate AI predictions 100x faster than standard CPUs!

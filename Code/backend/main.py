@@ -78,7 +78,10 @@ app.add_middleware(
     CORSMiddleware,
     # NOTE: When allow_credentials=True, you CANNOT use "*". You must specify the exact frontend domain.
     allow_origins=[
-        "http://localhost:5173", 
+        "http://localhost:5173",
+        "http://localhost:4173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:4173",
         "http://localhost:3000", 
         "https://neurosense-ai.vercel.app",
         "https://neurosense-ai-final.vercel.app"
@@ -337,14 +340,19 @@ async def analyze_speech(file: UploadFile = File(...)):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
             )
+            process_path = safe_wav_path
+        except FileNotFoundError:
+            # Fallback for LOCAL Windows testing where FFmpeg is not installed
+            print("[DEBUG] FFmpeg not found on system. Bypassing safety transcode (Local Mode).")
+            process_path = temp_audio_path
         except subprocess.TimeoutExpired:
             raise HTTPException(status_code=400, detail="Audio file decoding timed out. File may be corrupted.")
         except subprocess.CalledProcessError:
             raise HTTPException(status_code=400, detail="Failed to decode audio file. Invalid format received.")
 
-        print(f"[DEBUG] Extracting features from {safe_wav_path}...")
+        print(f"[DEBUG] Extracting features from {process_path}...")
         # Dispatch the physical file path through our feature extractor logic, and reshape exactly to a rigid horizontal tabular 1D structure
-        features = extract_speech_features(safe_wav_path).reshape(1, -1)
+        features = extract_speech_features(process_path).reshape(1, -1)
         print("[DEBUG] Features extracted successfully.")
         
         # Query our Scikit-Learn tree based strictly on the metrics produced
@@ -369,6 +377,8 @@ async def analyze_speech(file: UploadFile = File(...)):
             }
         }
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Crucial security and safety protocol: Delete the audio snapshot trace off the hard drive when evaluation finishes so storage doesn't max out.
