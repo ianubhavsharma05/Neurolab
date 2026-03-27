@@ -339,34 +339,40 @@ async def analyze_speech(file: UploadFile = File(...)):
     temp_audio_path = ""
     safe_wav_path = ""
     try:
-        # Log file size to monitor payload limits
+        # Log file size and identify extension
         content = await file.read()
-        print(f"[DEBUG] Received speech file: {file.filename}, Size: {len(content)} bytes")
+        filename = file.filename or "speech.wav"
+        is_wav = filename.lower().endswith(".wav")
+        print(f"[DEBUG] Received speech file: {filename}, Size: {len(content)} bytes, is_wav: {is_wav}")
         
-        with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as f:
+        # Use correct suffix based on incoming file
+        suffix = ".wav" if is_wav else ".webm"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
             f.write(content)
             temp_audio_path = f.name
             
-        # SAFETY LAYER: Force transcode via FFmpeg with a hard timeout to prevent endless deadlocks on corrupted browser chunks
-        safe_wav_path = temp_audio_path + "_safe.wav"
-        import subprocess
-        try:
-            subprocess.run(
-                ["ffmpeg", "-y", "-i", temp_audio_path, "-t", "10", "-ar", "22050", "-ac", "1", safe_wav_path],
-                timeout=45,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL
-            )
-            process_path = safe_wav_path
-        except FileNotFoundError:
-            # Fallback for LOCAL Windows testing where FFmpeg is not installed
-            print("[DEBUG] FFmpeg not found on system. Bypassing safety transcode (Local Mode).")
-            process_path = temp_audio_path
-        except subprocess.TimeoutExpired:
-            raise HTTPException(status_code=400, detail="Audio file decoding timed out. File may be corrupted.")
-        except subprocess.CalledProcessError:
-            raise HTTPException(status_code=400, detail="Failed to decode audio file. Invalid format received.")
+        process_path = temp_audio_path
+        
+        # Only transcode if NOT a WAV or if safety check is required
+        if not is_wav:
+            safe_wav_path = temp_audio_path + "_safe.wav"
+            import subprocess
+            try:
+                print(f"[DEBUG] Non-WAV detected. Transcoding for safety...")
+                subprocess.run(
+                    ["ffmpeg", "-y", "-i", temp_audio_path, "-t", "10", "-ar", "22050", "-ac", "1", safe_wav_path],
+                    timeout=30,
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL
+                )
+                process_path = safe_wav_path
+            except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as err:
+                # If FFmpeg fails on cloud or times out, we try to fallback to raw file if possible
+                print(f"[DEBUG] FFmpeg skip/fail: {err}. Attempting raw file processing.")
+                process_path = temp_audio_path
+        else:
+            print(f"[DEBUG] Pure WAV detected. Processing directly for maximum speed.")
 
         print(f"[DEBUG] Extracting features from {process_path}...")
         # Dispatch the physical file path through our feature extractor logic, and reshape exactly to a rigid horizontal tabular 1D structure
