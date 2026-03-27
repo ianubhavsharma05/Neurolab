@@ -101,7 +101,6 @@
 │   ├── 📁 backend           # FastAPI backend server
 │   │   ├── 📁 models        # PyTorch & Scikit-learn models
 │   │   ├── main.py          # Application endpoints & core logic
-│   │   ├── test_models.py   # Unit testing
 │   │   └── requirements.txt # Python dependencies
 │   ├── 📁 src               # React Frontend components & views
 │   ├── 📁 public            # Static web assets
