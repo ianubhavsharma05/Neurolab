@@ -159,21 +159,20 @@ try:
 except ImportError:
     print("[DEBUG] Scikit-learn NOT INSTALLED")
 
-speech_model = None
 # We attempt to load the Scikit-learn (Random Forest) acoustic classification engine via the joblib serializer
-if os.path.exists(SPEECH_MODEL_PATH):
-    print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
-    try:
+try:
+    if os.path.exists(SPEECH_MODEL_PATH):
+        print(f"[DEBUG] Attempting to load speech model from {SPEECH_MODEL_PATH}")
         speech_model = joblib.load(SPEECH_MODEL_PATH)
         print("[DEBUG] Speech model loaded successfully!")
-    except Exception as e:
-        speech_load_error = str(e)
-        print(f"[DEBUG] FAILED to load speech model: {e}")
-        import traceback
-        traceback.print_exc()
-else:
-    speech_load_error = f"Model file not found at {SPEECH_MODEL_PATH}"
-    print(f"[DEBUG] Speech model path does not exist: {SPEECH_MODEL_PATH}")
+    else:
+        speech_load_error = f"Model file not found at {SPEECH_MODEL_PATH}"
+        print(f"[DEBUG] CRITICAL: Speech model path does not exist: {SPEECH_MODEL_PATH}")
+except Exception as e:
+    speech_load_error = str(e)
+    print(f"[DEBUG] FAILED to load speech model: {e}")
+    import traceback
+    traceback.print_exc()
 
 # --- UTILITY FUNCTIONS ---
 
