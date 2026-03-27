@@ -30,14 +30,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # If we didn't do this, PyTorch would install massive 5GB GPU drivers and crash the deployment immediately.
 RUN pip install --no-cache-dir \
     --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch==2.3.0+cpu \
-    torchvision==0.18.0+cpu \
-    torchaudio==2.3.0+cpu
+    torch==2.4.1+cpu \
+    torchvision==0.19.1+cpu \
+    torchaudio==2.4.1+cpu
 
 # --- SPECIALIZED EXPLAINABILITY LIBRARY ---
-# Grad-CAM lets us "see" inside the neural network's brain. 
-# We use '--no-deps' so it doesn't accidentally download broken versions of OpenCV that conflict with our headless setup.
-RUN pip install --no-cache-dir --no-deps grad-cam==1.4.8
+# Grad-CAM 1.5.0 supports modern Torch 2.4 and resolves Numpy 2.0 conflicts.
+RUN pip install --no-cache-dir --no-deps grad-cam==1.5.0
 
 # Outputs the final list of installed libraries to the cloud console so we can debug if something breaks
 RUN pip list

@@ -1,9 +1,8 @@
 --extra-index-url https://download.pytorch.org/whl/cpu
 
 # ── Numpy: REQUIRED for unpickling the 2026 speech model ───────────────────────
-# IMPORTANT: Pinning to < 2.0.0 because Scikit-Learn 1.2.2 and Matplotlib 3.7 
-# are incompatible with the new Numpy 2.0 binary architecture.
-numpy==1.26.4
+# Note: Upgraded back to 2.1.x to match your pickled model's MT19937 BitGenerator architecture.
+numpy==2.1.1
 
 # ── Application dependencies ───────────────────────────────────────────────────
 fastapi==0.111.0
@@ -12,18 +11,18 @@ uvicorn==0.29.0
 python-multipart==0.0.9
 librosa==0.10.2
 joblib==1.4.2
-scikit-learn==1.5.0
-opencv-python-headless==4.8.0.76
-pillow==10.3.0
-matplotlib==3.7.1
-pydantic==2.7.1
+scikit-learn==1.5.2
+opencv-python-headless==4.10.0.84
+pillow==10.4.0
+matplotlib==3.9.2
+pydantic==2.9.2
 python-dotenv==1.0.1
 
 # ── AI Core Dependencies (CPU Optimized for Render/Railway/Vercel) ─────────────
 # IMPORTANT: These versions are strictly coordinated with the Dockerfile
-torch==2.3.0+cpu
-torchvision==0.18.0+cpu
-torchaudio==2.3.0+cpu
-grad-cam==1.4.8
+torch==2.4.1+cpu
+torchvision==0.19.1+cpu
+torchaudio==2.4.1+cpu
+grad-cam==1.5.0
 ttach==0.0.3
 tqdm
