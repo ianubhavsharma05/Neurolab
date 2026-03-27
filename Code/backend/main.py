@@ -353,7 +353,7 @@ async def analyze_speech(file: UploadFile = File(...)):
         try:
             subprocess.run(
                 ["ffmpeg", "-y", "-i", temp_audio_path, "-t", "10", "-ar", "22050", "-ac", "1", safe_wav_path],
-                timeout=15,
+                timeout=45,
                 check=True,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL
