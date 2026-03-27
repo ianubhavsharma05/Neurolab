@@ -47,9 +47,12 @@ export const uploadMRI = async (file: File) => {
     return response.json();
   } catch (error: any) {
     console.error('[API] MRI Upload Error:', error);
-    // SPECIAL FALLSAFE: If the backend is on a "Free Tier" (Render), it might be "sleeping". 
-    // We detect this and tell the user to wait a moment.
     if (error.message.includes('Failed to fetch') || error.message.includes('Network error')) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const isLocal = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+      if (isLocal) {
+        throw new Error('Backend not running locally. Open a terminal and run: .venv\\Scripts\\python.exe main.py');
+      }
       throw new Error('Server unreachable. If using Render Free, it may be waking up - please wait 30 seconds and try again.');
     }
     throw error;
@@ -80,6 +83,11 @@ export const uploadSpeech = async (audioBlob: Blob) => {
   } catch (error: any) {
     console.error('[API] Speech Upload Error:', error);
     if (error.message.includes('Failed to fetch')) {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const isLocal = apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1');
+      if (isLocal) {
+        throw new Error('Backend not running locally. Open a terminal and run: .venv\\Scripts\\python.exe main.py');
+      }
       throw new Error('Server unreachable. If using Render Free, it may be waking up - please wait 30 seconds and try again.');
     }
     throw error;
