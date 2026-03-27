@@ -197,8 +197,9 @@ const SpeechAnalysis: React.FC = () => {
     const interval = setInterval(() => setProgress(p => Math.min(p + Math.random() * 20, 95)), 400);
 
     try {
-      // WAKE UP CHECK: Only show cloud wake-up toast on Vercel/Railway, not local dev
-      const isCloudDeployment = !!import.meta.env.VITE_API_URL;
+      // WAKE UP CHECK: Only show cloud wake-up toast if connecting to a remote server (not localhost)
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const isCloudDeployment = !apiUrl.includes('localhost') && !apiUrl.includes('127.0.0.1');
       const isLive = await checkServerStatus();
       if (!isLive && isCloudDeployment) {
         toast.info("Acoustic Core is waking up... (Render/Railway Free Tier window initiated)");
