@@ -238,6 +238,24 @@ def extract_speech_features(file_path):
     return features
 
 
+# --- NUMBA JIT WARMUP PROCEDURE ---
+# Railway containers sleep. When they wake up, Numba takes 60-100 seconds to recompile the heavy librosa math to native C code.
+# If a user requests an analysis during this cold start, the HTTP request times out. 
+# We FORCE the machine to compile it into RAM secretly in the background the second the server boots!
+import threading
+def _numba_warmup():
+    print("[DEBUG] Initiating Numba JIT Warmup...")
+    try:
+        dummy_audio = np.zeros(2205, dtype=np.float32)
+        _ = librosa.feature.mfcc(y=dummy_audio, sr=22050, n_mfcc=13)
+        _ = librosa.piptrack(y=dummy_audio, sr=22050, fmin=50, fmax=500)
+        print("[DEBUG] Numba JIT Warmup Complete! Acoustic core ready for instant inference.")
+    except Exception as e:
+        print(f"[DEBUG] Numba JIT Warmup failed silently: {e}")
+
+threading.Thread(target=_numba_warmup, daemon=True).start()
+
+
 # --- API ENDPOINTS (How the internet functionally accesses our Python) ---
 
 @app.post("/analyze-mri")
