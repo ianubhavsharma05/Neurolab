@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (email: string, password: string, name: string, role: UserRole) => Promise<boolean>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => void;
   updateName: (newName: string) => void;
   isAuthenticated: boolean;
@@ -14,14 +16,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const DEFAULT_PATIENT_NAME = 'Anubhav';
-
-const normalizeDemoUser = <T extends { email?: string; name?: string }>(record: T): T => {
-  if (record.email === 'patient@neurosense.ai' && record.name === 'Sarah Johnson') {
-    return { ...record, name: DEFAULT_PATIENT_NAME };
-  }
-
-  return record;
-};
 
 const DEMO_USERS: Record<string, { password: string; user: User }> = {
   'patient@neurosense.ai': {
@@ -38,96 +32,85 @@ const DEMO_USERS: Record<string, { password: string; user: User }> = {
   },
 };
 
-/**
- * --- CORE AUTHENTICATION ENGINE ---
- * This manages who is logged in and what they can see.
- * We use a "Local Strategy" so you don't need a database during the demo.
- */
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  // When you open the tab, we check if you were already logged in (Persistence)
+  // --- SUPABASE SESSION SYNC ---
   useEffect(() => {
-    const stored = localStorage.getItem('neurosense_user');
-    if (stored) {
-      const normalizedUser = normalizeDemoUser(JSON.parse(stored));
-      setUser(normalizedUser);
-      localStorage.setItem('neurosense_user', JSON.stringify(normalizedUser));
-    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'patient',
+          createdAt: session.user.created_at
+        };
+        setUser(userData);
+      }
+    });
 
-    const storedUsers = localStorage.getItem('neurosense_users');
-    if (storedUsers) {
-      const normalizedUsers = JSON.parse(storedUsers).map((entry: any) => normalizeDemoUser(entry));
-      localStorage.setItem('neurosense_users', JSON.stringify(normalizedUsers));
-    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const userData: User = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'patient',
+          createdAt: session.user.created_at
+        };
+        setUser(userData);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  /**
-   * --- LOGIN LOGIC ---
-   * 1. First checks our hardcoded DEMO_USERS (patient@neurosense.ai).
-   * 2. If not found, checks the 'neurosense_users' list in your browser's local memory.
-   */
   const login = async (email: string, password: string): Promise<boolean> => {
-    const demo = DEMO_USERS[email];
-    if (demo && demo.password === password) {
-      setUser(demo.user);
-      localStorage.setItem('neurosense_user', JSON.stringify(demo.user));
-      return true;
-    }
-    const stored = localStorage.getItem('neurosense_users');
-    if (stored) {
-      const users = JSON.parse(stored);
-      const found = users.find((u: any) => u.email === email && u.password === password);
-      if (found) {
-        const { password: _, ...userData } = found;
-        setUser(userData);
-        localStorage.setItem('neurosense_user', JSON.stringify(userData));
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.warn('[Supabase] Login fallback:', error.message);
+      const demo = DEMO_USERS[email];
+      if (demo && demo.password === password) {
+        setUser(demo.user);
         return true;
       }
+      return false;
     }
-    return false;
-  };
-
-  const signup = async (email: string, password: string, name: string, role: UserRole): Promise<boolean> => {
-    const newUser: User = { id: uuidv4(), email, name, role, createdAt: new Date().toISOString() };
-    const stored = localStorage.getItem('neurosense_users');
-    const users = stored ? JSON.parse(stored) : [];
-    users.push({ ...newUser, password });
-    localStorage.setItem('neurosense_users', JSON.stringify(users));
-    setUser(newUser);
-    localStorage.setItem('neurosense_user', JSON.stringify(newUser));
     return true;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('neurosense_user');
+  const signup = async (email: string, password: string, name: string, role: UserRole): Promise<boolean> => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: name, role } }
+    });
+    return !error;
   };
 
-  /**
-   * --- UPDATE NAME ---
-   * Allows the patient to personalize their clinical identifier (Active Identifier).
-   */
+  const loginWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.origin }
+    });
+    if (error) throw error;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
+
   const updateName = (newName: string) => {
     if (!user) return;
-    const updatedUser = { ...user, name: newName };
-    setUser(updatedUser);
-    localStorage.setItem('neurosense_user', JSON.stringify(updatedUser));
-    
-    // Also update in registered users if exists to keep records consistent
-    const stored = localStorage.getItem('neurosense_users');
-    if (stored) {
-      const users = JSON.parse(stored);
-      const index = users.findIndex((u: any) => u.id === user.id);
-      if (index !== -1) {
-        users[index].name = newName;
-        localStorage.setItem('neurosense_users', JSON.stringify(users));
-      }
-    }
+    setUser({ ...user, name: newName });
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateName, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, login, signup, loginWithGoogle, logout, updateName, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
