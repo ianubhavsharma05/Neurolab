@@ -49,6 +49,14 @@ const Navbar: React.FC = () => {
       label: language === 'hi' ? 'सेशन मैट्रिक्स' : 'Session Matrix',
       path: '/reports',
     },
+    {
+      label: language === 'hi' ? 'क्लीनिकल कमांड' : 'Clinician Command',
+      path: '/doctor',
+    },
+    {
+      label: 'System Root',
+      path: '/admin',
+    },
   ] : [
     {
       label: language === 'hi' ? 'मुख्य क्षमताएं' : 'Core Capabilities',

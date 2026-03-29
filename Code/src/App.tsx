@@ -61,8 +61,8 @@ const AppRoutes = () => (
       <Route path="/cognitive" element={<ProtectedRoute><CognitiveTests /></ProtectedRoute>} />
       <Route path="/results" element={<ProtectedRoute><Results /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-      <Route path="/doctor" element={<ProtectedRoute roles={['doctor']}><DoctorDashboard /></ProtectedRoute>} />
-      <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/doctor" element={<ProtectedRoute><DoctorDashboard /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </>

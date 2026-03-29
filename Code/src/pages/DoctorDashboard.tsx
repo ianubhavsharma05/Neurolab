@@ -1,9 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Users, TrendingUp, FileText, Brain, Edit2, Check, X } from 'lucide-react';
+import { Users, TrendingUp, FileText, Brain, Edit2, Check, X, Activity } from 'lucide-react';
 import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { fetchPatients } from '../services/api';
+import { supabase } from '../lib/supabase';
 import { useEffect } from 'react';
 
 // Patient data overview for clinical monitoring
@@ -46,8 +47,50 @@ const DoctorDashboard: React.FC = () => {
       }
     };
     const timeout = setTimeout(loadPatients, 300);
-    return () => clearTimeout(timeout);
+
+    const subscription = supabase
+      .channel('public:patients')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'patients' }, (payload) => {
+        console.log('Real-time database change received!', payload);
+        if (payload.eventType === 'INSERT') {
+          // Immediately prepend the new patient to the table, removing the oldest if we exceed 15!
+          setPatients((prev) => [payload.new, ...prev].slice(0, 15));
+          setTotalPatients((prev) => prev + 1);
+        } else {
+          // If a row was updated or deleted
+          loadPatients();
+        }
+      })
+      .subscribe();
+
+    return () => {
+      clearTimeout(timeout);
+      supabase.removeChannel(subscription);
+    };
   }, [search]);
+
+  // A completely synthesized telemetry generator to test REAL-TIME dashboard updates
+  const simulateIncomingPatient = async () => {
+    const randomId = Math.floor(Math.random() * 9000) + 1000;
+    const names = ['Liam', 'Emma', 'Oliver', 'Ava', 'William', 'Sophia', 'James', 'Isabella', 'Benjamin', 'Mia'];
+    const conditions = ['Alzheimer Phase 1', 'MCI Protocol', 'Vascular Sub-Type', 'Stable Baseline', 'Lewy Body Monitor'];
+    const risks = ['Low', 'Early', 'Critical'];
+    
+    const newPatient = {
+      id: `NS-${randomId}`,
+      name: `${names[Math.floor(Math.random() * names.length)]} ${names[Math.floor(Math.random() * names.length)]}son`,
+      age: Math.floor(Math.random() * 40) + 50,
+      gender: Math.random() > 0.5 ? 'M' : 'F',
+      condition: conditions[Math.floor(Math.random() * conditions.length)],
+      riskLevel: risks[Math.floor(Math.random() * risks.length)],
+      status: `Session ${Math.floor(Math.random() * 15) + 1}/15`,
+      lastConsultation: new Date().toISOString().split('T')[0],
+    };
+
+    // Push DIRECTLY to Supabase!
+    const { error } = await supabase.from('patients').insert([newPatient]);
+    if (error) console.error("Failed to inject test patient:", error);
+  };
 
   const handleEdit = (id: string, currentName: string) => {
     setEditingId(id);
@@ -162,7 +205,6 @@ const DoctorDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-
       <div className="glass-card rounded-[32px] border-white/5 overflow-hidden">
         <div className="p-10 border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
@@ -171,6 +213,14 @@ const DoctorDashboard: React.FC = () => {
           </div>
           
           <div className="flex items-center gap-4 w-full md:w-auto">
+            <button
+              onClick={simulateIncomingPatient}
+              className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-4 py-2.5 text-xs font-mono text-primary transition-all hover:bg-primary/20 hover:border-primary/40 shrink-0"
+              title="Inject a fake patient row directly into Supabase to test real-time WebSocket syncing"
+            >
+              <Activity className="w-4 h-4" />
+              INJECT TELEMETRY
+            </button>
             <div className="relative group w-full md:w-64">
               <input 
                 type="text" 
@@ -180,7 +230,7 @@ const DoctorDashboard: React.FC = () => {
                 className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-mono"
               />
             </div>
-            <div className="flex gap-2 shrink-0">
+            <div className="flex gap-2 shrink-0 items-center bg-white/[0.02] border border-white/5 px-3 py-1.5 rounded-full ml-2">
                 <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                 <span className="text-[9px] font-mono text-primary uppercase tracking-widest">Live Sync</span>
             </div>
