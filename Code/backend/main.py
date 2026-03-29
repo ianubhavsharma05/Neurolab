@@ -16,6 +16,9 @@ os.environ.setdefault("NUMBA_CACHE_DIR", tempfile.gettempdir())
 os.environ.setdefault("MPLCONFIGDIR", tempfile.gettempdir())
 os.environ.setdefault("XDG_CACHE_HOME", tempfile.gettempdir())
 
+# DIRECTORY CONFIG: We use this dynamic absolute path system so the code finds everything no matter what server we run on
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- EXTERNAL AI LIBRARIES ---
 import cv2             # OpenCV: Industry-standard image processing library. Used here to mathematically shrink heatmaps quickly
 import joblib          # Joblib: A highly optimized serialization processor strictly for loading Scikit-Learn ML models rapidly
@@ -66,7 +69,6 @@ else:
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # DIRECTORY CONFIG: We use this dynamic absolute path system so the code finds the 'models' folder no matter what OS/server we run it on
-_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MRI_MODEL_PATH = os.path.join(_BASE_DIR, "models", "final_model.pth")     # The massive ResNet deep learning model binary
 SPEECH_MODEL_PATH = os.path.join(_BASE_DIR, "models", "speech_model.pkl") # The structured decision-tree machine learning model
 
