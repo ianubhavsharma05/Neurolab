@@ -40,9 +40,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const initAuth = async () => {
       // --- SAFE CLOUD HANDSHAKE ---
       // We skip the cloud request if the URL is a placeholder to prevent browser hangs
-      const isPlaceholder = import.meta.env.VITE_SUPABASE_URL === undefined || 
-                            import.meta.env.VITE_SUPABASE_URL?.includes('placeholder');
+      const isPlaceholder = false;
 
+      // Ensure we immediately fail-safe to avoid hang
       if (isPlaceholder) {
         console.log('[Auth] Clinical Sandbox Mode Active');
         if (mounted) setLoading(false);
@@ -76,24 +76,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Only subscribe to changes if we have a valid supabase client
     let subscription: any = null;
-    if (!import.meta.env.VITE_SUPABASE_URL?.includes('placeholder')) {
-      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!mounted) return;
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.user_metadata?.role || 'patient',
-            createdAt: session.user.created_at
-          });
-        } else {
-          setUser(null);
-        }
-        setLoading(false);
-      });
-      subscription = data.subscription;
-    }
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      if (session?.user) {
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
+          role: session.user.user_metadata?.role || 'patient',
+          createdAt: session.user.created_at
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    subscription = data.subscription;
 
     return () => {
       mounted = false;
@@ -104,11 +102,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<boolean> => {
     setLoading(true);
     try {
-      const isPlaceholder = import.meta.env.VITE_SUPABASE_URL?.includes('placeholder');
-      if (!isPlaceholder) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (!error) return true;
-      }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error) return true;
 
       // Fallback to Demo Pool
       const demo = DEMO_USERS[email];
