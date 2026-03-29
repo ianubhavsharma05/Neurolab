@@ -129,3 +129,23 @@ export const getOverallRisk = async (mriScore: number, speechScore: number, cogn
     throw error;
   }
 };
+
+/**
+ * FUNCTION: fetchPatients
+ * PURPOSE: Retrieves the list of subjects from the implementation database (6000+ records).
+ */
+export const fetchPatients = async (limit = 10, skip = 0, search = '') => {
+  try {
+    const url = new URL(`${API_BASE_URL}/patients`);
+    url.searchParams.append('limit', limit.toString());
+    url.searchParams.append('skip', skip.toString());
+    if (search) url.searchParams.append('search', search);
+
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error('Failed to fetch patient records');
+    return response.json();
+  } catch (error: any) {
+    console.error('[API] Patient Retrieval Error:', error);
+    throw error;
+  }
+};

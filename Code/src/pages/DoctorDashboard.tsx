@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { Users, TrendingUp, FileText, Brain, Edit2, Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { fetchPatients } from '../services/api';
+import { useEffect } from 'react';
 
 // Patient data overview for clinical monitoring
 const INITIAL_PATIENT_DATA = [
@@ -23,9 +25,29 @@ const precisionTrendData = [
 ];
 
 const DoctorDashboard: React.FC = () => {
-  const [patients, setPatients] = useState(INITIAL_PATIENT_DATA);
+  const [patients, setPatients] = useState<any[]>([]);
+  const [totalPatients, setTotalPatients] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
+
+  useEffect(() => {
+    const loadPatients = async () => {
+      setLoading(true);
+      try {
+        const result = await fetchPatients(15, 0, search);
+        setPatients(result.data);
+        setTotalPatients(result.total);
+      } catch (err) {
+        console.error('Failed to load subjects', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    const timeout = setTimeout(loadPatients, 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   const handleEdit = (id: string, currentName: string) => {
     setEditingId(id);
@@ -54,10 +76,10 @@ const DoctorDashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {[
-          { icon: Users, label: 'Active Subjects', value: '5', color: 'text-primary' },
-          { icon: Brain, label: 'Telemetry Syncs', value: '34', color: 'text-accent' },
-          { icon: TrendingUp, label: 'Critical Variance', value: '1', color: 'text-red-400' },
-          { icon: FileText, label: 'Intelligence Logs', value: '12', color: 'text-indigo-400' },
+          { icon: Users, label: 'Active Subjects', value: totalPatients.toLocaleString(), color: 'text-primary' },
+          { icon: Brain, label: 'Implementation Pool', value: '10k+', color: 'text-accent' },
+          { icon: TrendingUp, label: 'Clinical Reach', value: '6000+', color: 'text-red-400' },
+          { icon: FileText, label: 'Analytics Syncs', value: 'Instant', color: 'text-indigo-400' },
         ].map((stat, i) => (
           <motion.div 
             key={stat.label} 
@@ -142,11 +164,26 @@ const DoctorDashboard: React.FC = () => {
       </div>
 
       <div className="glass-card rounded-[32px] border-white/5 overflow-hidden">
-        <div className="p-10 border-b border-white/5 flex items-center justify-between">
-          <h3 className="text-2xl font-bold text-white tracking-tight">Active Surveillance List</h3>
-          <div className="flex gap-2">
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-[9px] font-mono text-primary uppercase tracking-widest">Live Sync</span>
+        <div className="p-10 border-b border-white/5 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl font-bold text-white tracking-tight">Active Surveillance List</h3>
+            <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mt-1">Cross-referencing {totalPatients} implementations</p>
+          </div>
+          
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative group w-full md:w-64">
+              <input 
+                type="text" 
+                placeholder="Search Subjects..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-white/[0.02] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-mono"
+              />
+            </div>
+            <div className="flex gap-2 shrink-0">
+                <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                <span className="text-[9px] font-mono text-primary uppercase tracking-widest">Live Sync</span>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -164,50 +201,33 @@ const DoctorDashboard: React.FC = () => {
               {patients.map(p => (
                 <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
                   <td className="p-8">
-                    {editingId === p.id ? (
-                      <div className="flex items-center gap-4">
-                        <input
-                          autoFocus
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleSave(p.id)}
-                          className="bg-white/5 border border-primary/40 rounded-xl px-4 py-2 text-sm text-white outline-none focus:ring-1 focus:ring-primary w-full font-light"
-                        />
-                        <button onClick={() => handleSave(p.id)} className="text-primary hover:scale-110 transition-transform">
-                          <Check className="w-5 h-5" />
-                        </button>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-[10px] text-white/30 font-mono">
+                          {p.id}
                       </div>
-                    ) : (
-                      <div className="flex items-center gap-3 cursor-pointer group/name" onClick={() => handleEdit(p.id, p.name)}>
-                        <div className="w-8 h-8 rounded-full bg-white/[0.03] border border-white/10 flex items-center justify-center text-[10px] text-white/30 font-mono">
-                            {p.id.toUpperCase()}
-                        </div>
-                        <span className="text-white font-medium group-hover/name:text-primary transition-colors">{p.name}</span>
-                        <Edit2 className="w-3 h-3 text-white/10 opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                      <div className="flex flex-col">
+                        <span className="text-white font-medium">{p.name}</span>
+                        <span className="text-[10px] font-mono text-white/20 uppercase">{p.gender}, Age {p.age}</span>
                       </div>
-                    )}
+                    </div>
                   </td>
-                  <td className="p-8 text-center md:text-left">
+                  <td className="p-8">
                     <div className="flex flex-col gap-2">
-                        <span className={`text-xl font-bold font-mono tracking-tighter ${p.lastScore < 33 ? 'text-primary' : p.lastScore < 66 ? 'text-accent' : 'text-red-400'}`}>
-                        {p.lastScore}%
+                        <span className={`text-xl font-bold font-mono tracking-tighter ${p.riskLevel === 'Low' ? 'text-primary' : p.riskLevel === 'Early' ? 'text-accent' : 'text-red-400'}`}>
+                          {p.condition}
                         </span>
-                        <div className="h-1 w-12 bg-white/5 rounded-full overflow-hidden">
-                            <div className={`h-full ${p.lastScore < 33 ? 'bg-primary' : p.lastScore < 66 ? 'bg-accent' : 'bg-red-400'}`} style={{ width: `${p.lastScore}%` }} />
-                        </div>
                     </div>
                   </td>
                   <td className="p-8">
                       <span className="text-[10px] font-mono text-white/40 uppercase tracking-widest px-3 py-1 rounded-full bg-white/[0.03] border border-white/5">
-                        {p.trend}
+                        {p.riskLevel}
                       </span>
                   </td>
                   <td className="p-8">
-                      <span className="text-sm font-light text-white/60">{p.sessions} sessions</span>
+                      <span className="text-sm font-light text-white/60">{p.status}</span>
                   </td>
                   <td className="p-8">
-                      <span className="text-xs font-mono text-white/20">{p.lastVisit}</span>
+                      <span className="text-xs font-mono text-white/20">{p.lastConsultation}</span>
                   </td>
                 </tr>
               ))}

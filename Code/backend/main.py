@@ -30,6 +30,8 @@ import torchvision.models as models # Contains standard pre-built deep learning 
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware # CORS ensures safety by letting only approved frontends talk to this backend
 from PIL import Image  # Pillow (Python Imaging Library): Used for reading and opening actual physical image files (JPGs/PNGs)
+from supabase import create_client, Client # Supabase: Official PostgreSQL cloud connector
+from dotenv import load_dotenv # Dotenv: Automatically parses environmental secrets
 
 # Optimize PyTorch explicitly for shared CPU environments (Render/Railway) to prevent out-of-memory thread exhaustion
 torch.set_num_threads(1) 
@@ -40,8 +42,25 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 from torchvision import transforms    # Transforms: Alters our brain image pixels, squishing and coloring them exactly how the AI demands
 
 # --- CONFIGURATION & CONSTANTS ---
+# Load configuration from .env file (parent directory check)
+load_dotenv(os.path.join(os.path.dirname(_BASE_DIR), ".env"))
+
 PORT = int(os.environ.get("PORT", 8000))
 CORS_ORIGINS = ["*"]
+
+# --- CLOUD DATABASE CONNECTIVITY (Supabase) ---
+SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY")
+
+supabase_client: Client = None
+if SUPABASE_URL and SUPABASE_KEY and "your-supabase" not in SUPABASE_URL:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("[DEBUG] Connected to Supabase PostgreSQL successfully!")
+    except Exception as e:
+        print(f"[DEBUG] CRITICAL: Supabase connection failed: {e}")
+else:
+    print("[DEBUG] WARNING: Supabase credentials missing (VITE_SUPABASE_URL/KEY). Falling back to JSON.")
 
 # DEVICE CONFIG: Automatically detects if the physical server hosting this code has a powerful Graphics Card (GPU) via "cuda" or must run on "cpu"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -61,6 +80,22 @@ MRI_LABEL_MAP = {
     "MildDemented": "Moderate",
     "ModerateDemented": "High"
 }
+
+# --- PATIENT DATABASE CONFIG ---
+# Loads the generated patient records to simulate a real-world clinic-scale clinical implementation
+PATIENT_DB_PATH = os.path.join(_BASE_DIR, "patient_records.json")
+try:
+    import json
+    if os.path.exists(PATIENT_DB_PATH):
+        with open(PATIENT_DB_PATH, "r") as f:
+            patient_db = json.load(f)
+            print(f"[DEBUG] Patient database loaded: {len(patient_db)} records synchronized!")
+    else:
+        patient_db = []
+        print("[DEBUG] WARNING: Patient database not found.")
+except Exception as e:
+    patient_db = []
+    print(f"[DEBUG] CRITICAL: Failed to load patient database: {e}")
 
 # The Visual Pipeline Rules: Before showing an MRI to PyTorch, we MUST crunch every brain image to precisely 224x224 pixels. 
 # We then mathematically "normalize" it, tearing down shadows to a neutral average (0.5), preventing the AI from being confused by lighting glares.
@@ -306,10 +341,28 @@ async def analyze_mri(file: UploadFile = File(...)):
         del input_tensor, gradcam_tensor, content, image
         gc.collect()
 
+        # --- LIVE DATABASE TRACKING (Supabase Persistence) ---
+        # Automatically logs this analysis into the cloud for long-term clinical auditing and usage tracking
+        analysis_result = {
+            "confidence": confidence.item() * 100,
+            "classification": classification,
+            "mri_result": raw_label,
+            "scan_id": str(uuid.uuid4())[:8],
+            "processed_at": "now()"
+        }
+
+        if supabase_client:
+            try:
+                # We attempt to persist the clinical data into the 'mri_analyses' table
+                supabase_client.table("mri_analyses").insert(analysis_result).execute()
+                print(f"[DEBUG] Analysis persistent: {analysis_result['scan_id']} logged to Supabase.")
+            except Exception as db_err:
+                print(f"[DEBUG] Logging failed (continuing analysis): {db_err}")
+
         return {
             "id": str(uuid.uuid4()),
             "confidence": confidence.item() * 100,
-            "modelAccuracy": 85.4, # Measured historical performance block
+            "modelAccuracy": 85.4,
             "classification": classification,
             "heatmapData": heatmap_data,
             "findings": [
@@ -318,7 +371,7 @@ async def analyze_mri(file: UploadFile = File(...)):
                 "Hippocampal volume assessment complete."
             ],
             "metadata": {
-                "scan_id": str(uuid.uuid4())[:8],
+                "scan_id": analysis_result["scan_id"],
                 "model_version": "ResNet18-Cortex-v2",
                 "device_inference": str(DEVICE)
             }
@@ -436,6 +489,52 @@ async def calculate_risk(request: RiskRequest):
 async def root():
     # Ping service: Communicates externally to Railway/Render that our FastAPI startup phase finished uninterrupted and is accepting traffic normally
     return {"message": "Neurosense AI Integrated Core API", "status": "active"}
+
+@app.get("/patients")
+async def get_patients(limit: int = 50, skip: int = 0, search: str = None):
+    """
+    Endpoint: Integrated Query Optimizer. Checks for Supabase cloud database first.
+    If unavailable (e.g., local development), fall back to the synchronized local JSON pool.
+    """
+    if supabase_client:
+        try:
+            query = supabase_client.table("patients").select("*", count="exact")
+            if search:
+                query = query.ilike("name", f"%{search}%")
+            
+            # Application of pagination at the database level for maximum cloud performance
+            response = query.range(skip, skip + limit - 1).execute()
+            return {
+                "total": response.count,
+                "count": len(response.data),
+                "data": response.data,
+                "source": "Supabase Cloud"
+            }
+        except Exception as e:
+            print(f"[DEBUG] Supabase query failed, falling back to JSON: {e}")
+
+    # --- FALLBACK MECHANISM (Local/Legacy support) ---
+    filtered = patient_db
+    if search:
+        search = search.lower()
+        filtered = [p for p in patient_db if search in p['name'].lower() or search in p['id'].lower()]
+    
+    return {
+        "total": len(filtered),
+        "count": len(filtered[skip:skip+limit]),
+        "data": filtered[skip:skip+limit],
+        "source": "Local JSON"
+    }
+
+@app.get("/patients/{patient_id}")
+async def get_patient_by_id(patient_id: str):
+    """
+    Endpoint: Direct lookup of clinical patient records by unique ID or Name match.
+    """
+    for p in patient_db:
+        if p['id'] == patient_id or p['name'].lower() == patient_id.lower():
+            return p
+    raise HTTPException(status_code=404, detail="Patient record not found in Neurosense database.")
 
 @app.get("/health")
 async def health():
