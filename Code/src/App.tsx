@@ -37,7 +37,11 @@ const RouteScrollRestorer: React.FC = () => {
 };
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: string[] }> = ({ children, roles }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
+  
+  // If we are still initializing the Identity Shield, wait.
+  if (loading) return null;
+
   if (!isAuthenticated) return <Navigate to="/login" />;
   if (roles && user && !roles.includes(user.role)) return <Navigate to="/dashboard" />;
   return <>{children}</>;
