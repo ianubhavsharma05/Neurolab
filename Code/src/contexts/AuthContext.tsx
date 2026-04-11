@@ -5,30 +5,27 @@ import { supabase } from '@/lib/supabase';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  signup: (email: string, password: string, name: string, role: UserRole) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, name: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: () => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateName: (newName: string) => void;
   isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const DEMO_USERS: Record<string, { password: string; user: User }> = {
-  'patient@neurosense.ai': {
-    password: 'patient123',
-    user: { id: 'p1', email: 'patient@neurosense.ai', name: 'Anubhav', role: 'patient', createdAt: '2024-01-15' }
-  },
-  'doctor@neurosense.ai': {
-    password: 'doctor123',
-    user: { id: 'd1', email: 'doctor@neurosense.ai', name: 'Dr. Michael Chen', role: 'doctor', createdAt: '2024-01-10' }
-  },
-  'admin@neurosense.ai': {
-    password: 'admin123',
-    user: { id: 'a1', email: 'admin@neurosense.ai', name: 'Admin User', role: 'admin', createdAt: '2024-01-01' }
-  },
-};
+function mapSessionUser(sessionUser: any): User {
+  return {
+    id: sessionUser.id,
+    email: sessionUser.email || '',
+    name: sessionUser.user_metadata?.full_name
+      || sessionUser.email?.split('@')[0]
+      || 'User',
+    role: (sessionUser.user_metadata?.role as UserRole) || 'patient',
+    createdAt: sessionUser.created_at,
+  };
+}
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -38,35 +35,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     let mounted = true;
 
     const initAuth = async () => {
-      // --- SAFE CLOUD HANDSHAKE ---
-      // We skip the cloud request if the URL is a placeholder to prevent browser hangs
-      const isPlaceholder = false;
-
-      // Ensure we immediately fail-safe to avoid hang
-      if (isPlaceholder) {
-        console.log('[Auth] Clinical Sandbox Mode Active');
-        if (mounted) setLoading(false);
-        return;
-      }
-
       try {
-        // Add a 3-second timeout to the session sync to prevent Vercel "hanging"
         const sessionPromise = supabase.auth.getSession();
-        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000));
-        
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('timeout')), 4000)
+        );
+
         const { data: { session } } = await (Promise.race([sessionPromise, timeoutPromise]) as any);
-        
+
         if (mounted && session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            role: session.user.user_metadata?.role || 'patient',
-            createdAt: session.user.created_at
-          });
+          setUser(mapSessionUser(session.user));
         }
-      } catch (err) {
-        console.warn('[Auth] Cloud sync timed out or skipped. Using local identity pool.', err);
+      } catch {
       } finally {
         if (mounted) setLoading(false);
       }
@@ -74,64 +54,66 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     initAuth();
 
-    // Only subscribe to changes if we have a valid supabase client
-    let subscription: any = null;
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-      if (session?.user) {
-        setUser({
-          id: session.user.id,
-          email: session.user.email || '',
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-          role: session.user.user_metadata?.role || 'patient',
-          createdAt: session.user.created_at
-        });
-      } else {
-        setUser(null);
-      }
+      setUser(session?.user ? mapSessionUser(session.user) : null);
       setLoading(false);
     });
-    subscription = data.subscription;
 
     return () => {
       mounted = false;
-      if (subscription) subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error) return true;
-
-      // Fallback to Demo Pool
-      const demo = DEMO_USERS[email];
-      if (demo && demo.password === password) {
-        setUser(demo.user);
-        return true;
+      if (error) {
+        return { success: false, error: 'Invalid credentials. Please check your email and password.' };
       }
-      return false;
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Authentication service unavailable. Please try again.' };
     } finally {
       setLoading(false);
     }
   };
 
-  const signup = async (email: string, password: string, name: string, role: UserRole): Promise<boolean> => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name, role } }
-    });
-    return !error;
+  const signup = async (
+    email: string,
+    password: string,
+    name: string,
+    role: UserRole
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role,
+          },
+        },
+      });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch {
+      return { success: false, error: 'Signup failed. Please try again.' };
+    }
   };
 
   const loginWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: {
+        redirectTo: window.location.origin,
+        scopes: 'email profile',
+      },
     });
-    if (error) throw error;
+    if (error) throw new Error(error.message);
   };
 
   const logout = async () => {
@@ -145,15 +127,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, loginWithGoogle, logout, updateName, isAuthenticated: !!user }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, signup, loginWithGoogle, logout, updateName, isAuthenticated: !!user }}
+    >
       {loading ? (
         <div className="fixed inset-0 bg-[#03040a] flex items-center justify-center z-[9999]">
           <div className="flex flex-col items-center gap-6">
-             <div className="h-16 w-16 rounded-full border-4 border-[#00f59b] border-t-transparent animate-spin shadow-[0_0_20px_rgba(0,245,155,0.2)]"></div>
-             <p className="text-[#00f59b] font-mono text-sm tracking-[0.3em] uppercase animate-pulse">Initializing Identity Shield...</p>
+            <div className="h-16 w-16 rounded-full border-4 border-[#00f59b] border-t-transparent animate-spin shadow-[0_0_20px_rgba(0,245,155,0.2)]" />
+            <p className="text-[#00f59b] font-mono text-sm tracking-[0.3em] uppercase animate-pulse">
+              Verifying Identity...
+            </p>
           </div>
         </div>
-      ) : children}
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
 };
