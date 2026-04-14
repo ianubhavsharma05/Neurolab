@@ -13,7 +13,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL;
 
 if (!API_BASE_URL) {
   if (import.meta.env.DEV) {
-    throw new Error('[Neurosense] VITE_API_URL is not set. Check your .env.local file.');
+    throw new Error('[NeuroLab] VITE_API_URL is not set. Check your .env.local file.');
   }
 }
 

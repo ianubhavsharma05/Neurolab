@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 const Chatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{role: 'bot' | 'user', text: string}[]>([
-    { role: 'bot', text: 'Hello! I am the Neurosense Intelligent Hub. How can I assist you today with diagnostic mapping?' }
+    { role: 'bot', text: 'Hello! I am the NeuroLab Intelligent Hub. How can I assist you today with diagnostic mapping?' }
   ]);
   const [input, setInput] = useState('');
   const { language } = useLanguage();

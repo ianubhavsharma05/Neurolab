@@ -58,7 +58,7 @@ const Dashboard: React.FC = () => {
   const latestCognitive = cognitiveResults[cognitiveResults.length - 1];
 
   // METRICS CALCULATION:
-  // totalSessions: Total interactions with the NeuroSense platform.
+  // totalSessions: Total interactions with the NeuroLab platform.
   // activeModules: How many of the 3 key tests (MRI, Speech, Cognitive) have been completed at least once.
   const totalSessions = mriResults.length + speechResults.length + cognitiveResults.length;
   const activeModules = [latestMRI, latestSpeech, latestCognitive].filter(Boolean).length;

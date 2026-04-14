@@ -68,7 +68,7 @@ const Reports: React.FC = () => {
     // Report Header
     doc.setFontSize(22);
     doc.setTextColor(0, 245, 155); // Primary color
-    doc.text('NEUROSENSE AI', 20, y);
+    doc.text('NeuroLab', 20, y);
     y += 8;
     doc.setFontSize(10);
     doc.setTextColor(150, 150, 150);
@@ -113,7 +113,7 @@ const Reports: React.FC = () => {
       doc.text(r.transcript ? r.transcript.slice(0, 100) + '...' : 'Not available', 25, y);
     }
 
-    doc.save(`NEUROSENSE_${session.type}_${session.id.slice(0, 8)}.pdf`);
+    doc.save(`NeuroLab_${session.type}_${session.id.slice(0, 8)}.pdf`);
     toast.success('Clinical telemetry exported');
   };
 

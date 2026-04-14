@@ -81,8 +81,7 @@ const Navbar: React.FC = () => {
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-display font-bold text-xl tracking-tighter text-white">
-                NEURO <span className="text-primary group-hover:text-white transition-colors">SENSE</span>{' '}
-                <span className="text-sm text-primary">AI</span>
+                NEURO <span className="text-primary group-hover:text-white transition-colors">LAB</span>
               </span>
               <span className="hidden sm:block text-[9px] font-mono uppercase tracking-[0.28em] text-white/35 mt-1">
                 {copy.subtitle}

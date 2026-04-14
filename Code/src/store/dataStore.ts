@@ -8,7 +8,7 @@ import { MRIResult, SpeechResult, CognitiveTestResult, RiskAssessment, Historica
  * HELPER: getKey
  * Purpose: Generates a unique "locker key" for your data so it doesn't get mixed up with other websites.
  */
-const getKey = (prefix: string, userId: string) => `neurosense_${prefix}_${userId}`;
+const getKey = (prefix: string, userId: string) => `NeuroLab_${prefix}_${userId}`;
 
 export const dataStore = {
   // SAVING MRI RESULTS

@@ -33,19 +33,19 @@ const About: React.FC = () => {
     ? {
         projectName: 'प्रोजेक्ट नाम',
         coreCapability: 'मुख्य क्षमता',
-        title: 'NeuroSense AI',
+        title: 'NeuroLab',
         description: 'MRI विश्लेषण, स्पीच बायोमार्कर्स, कॉग्निटिव टेस्टिंग और एक्सप्लेनेबल एआई रिपोर्टिंग के साथ मल्टीमॉडल डिमेंशिया रिस्क असेसमेंट।',
         architecture: 'सिस्टम आर्किटेक्चर',
-        architectureText: 'NeuroSense AI एक हाई-फिडेलिटी डायग्नोस्टिक एनवायरनमेंट है जो मल्टीमॉडल इंटेलिजेंस स्ट्रीम्स और एक्सप्लेनेबल न्यूरल आर्किटेक्चर को जोड़कर शुरुआती डिमेंशिया रिस्क असेसमेंट को सपोर्ट करता है।',
+        architectureText: 'NeuroLab एक हाई-फिडेलिटी डायग्नोस्टिक एनवायरनमेंट है जो मल्टीमॉडल इंटेलिजेंस स्ट्रीम्स और एक्सप्लेनेबल न्यूरल आर्किटेक्चर को जोड़कर शुरुआती डिमेंशिया रिस्क असेसमेंट को सपोर्ट करता है।',
         techTitle: 'टेक्नोलॉजी इंटीग्रेशन मैट्रिक्स',
       }
     : {
         projectName: 'Project Name',
         coreCapability: 'Core Capability',
-        title: 'NeuroSense AI',
+        title: 'NeuroLab',
         description: 'Multimodal dementia risk assessment across MRI analysis, speech biomarkers, cognitive testing, and explainable AI reporting.',
         architecture: 'System Architecture',
-        architectureText: 'NeuroSense AI is a high-fidelity diagnostic environment that fuses multimodal intelligence streams with explainable neural architectures to support early dementia risk assessment.',
+        architectureText: 'NeuroLab is a high-fidelity diagnostic environment that fuses multimodal intelligence streams with explainable neural architectures to support early dementia risk assessment.',
         techTitle: 'Technology Integration Matrix',
       };
 

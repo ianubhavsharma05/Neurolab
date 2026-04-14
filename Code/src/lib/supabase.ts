@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(
-    '[Neurosense Security] Missing Supabase environment variables. ' +
+    '[NeuroLab Security] Missing Supabase environment variables. ' +
     'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Vercel project settings.'
   );
 }
