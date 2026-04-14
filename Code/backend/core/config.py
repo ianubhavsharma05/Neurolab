@@ -19,7 +19,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("neurosense")
+logger = logging.getLogger("NeuroLab")
 
 os.environ.setdefault("NUMBA_NUM_THREADS", "1")
 os.environ.setdefault("OMP_NUM_THREADS", "1")
@@ -35,10 +35,10 @@ ALLOWED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:4173",
     "http://localhost:3000",
-    "https://neurosense-ai.vercel.app",
-    "https://neurosense-ai-final.vercel.app",
+    "https://NeuroLab-ai.vercel.app",
+    "https://NeuroLab-ai-final.vercel.app",
     "https://neuroscan-ai.vercel.app",
-    "https://neurosense-ai-git-main-ianubhavsharma05-2903s-projects.vercel.app",
+    "https://NeuroLab-ai-git-main-ianubhavsharma05-2903s-projects.vercel.app",
 ]
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or os.environ.get("VITE_SUPABASE_URL")

@@ -1,4 +1,4 @@
-# Core Programming Concepts In NeuroSense AI
+# Core Programming Concepts In NeuroLab
 
 This document summarizes the main implementation patterns used in the current codebase.
 

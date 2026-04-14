@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 def migrate_to_supabase():
     # Load from Code/.env where user indicated keys are stored
-    root_env = r"C:\Users\ianub\Documents\Neurosense\Code\.env"
+    root_env = r"C:\Users\ianub\Documents\NeuroLab\Code\.env"
     load_dotenv(root_env)
     
     url = os.environ.get("VITE_SUPABASE_URL")
@@ -32,7 +32,7 @@ def migrate_to_supabase():
 
     supabase: Client = create_client(url, key)
     
-    db_path = r"C:\Users\ianub\Documents\Neurosense\Code\backend\patient_records.json"
+    db_path = r"C:\Users\ianub\Documents\NeuroLab\Code\backend\patient_records.json"
     if not os.path.exists(db_path):
         print(f"Error: {db_path} not found. Run generate_records.py first.")
         return

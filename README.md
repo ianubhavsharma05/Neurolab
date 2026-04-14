@@ -1,4 +1,4 @@
-# 🧠 Neurosense AI: Multimodal Dementia Risk Assessment
+# 🧠 NeuroLab: Multimodal Dementia Risk Assessment
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![React 18](https://img.shields.io/badge/react-18-61DAFB.svg)](https://reactjs.org/)
@@ -7,7 +7,7 @@
 
 ## 1. PROJECT OVERVIEW
 
-**Neurosense AI** is an advanced diagnostic auxiliary tool designed to detect early-stage dementia using a multimodal artificial intelligence approach. By analyzing structural neuroimaging (MRI) and acoustic biomarker analysis (Speech), along with digital cognitive evaluations, the platform fuses multiple modalities to produce a unified risk index score.
+**NeuroLab** is an advanced diagnostic auxiliary tool designed to detect early-stage dementia using a multimodal artificial intelligence approach. By analyzing structural neuroimaging (MRI) and acoustic biomarker analysis (Speech), along with digital cognitive evaluations, the platform fuses multiple modalities to produce a unified risk index score.
 
 ### Key Value Proposition
 - **Automated MRI Analysis:** Leverages a ResNet-18 model to evaluate hippocampus and temporal lobe morphology, returning Grad-CAM heatmaps for explainability.
@@ -68,8 +68,8 @@
 ### Initialization
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/ianubhavsharma05/Neurosense.git
-   cd Neurosense
+   git clone https://github.com/ianubhavsharma05/NeuroLab.git
+   cd NeuroLab
    ```
 
 2. **Frontend Setup:**
@@ -96,7 +96,7 @@
 ## 6. FOLDER STRUCTURE
 
 ```
-📁 Neurosense
+📁 NeuroLab
 ├── 📁 Code                  
 │   ├── 📁 backend           # FastAPI backend server
 │   │   ├── 📁 models        # PyTorch & Scikit-learn models

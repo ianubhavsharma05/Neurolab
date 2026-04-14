@@ -21,7 +21,7 @@
   ],
   "compounds": [
     {
-      "name": "Run Neurosense AI (Full App)",
+      "name": "Run NeuroLab (Full App)",
       "configurations": ["Run Backend (FastAPI)", "Run Frontend (Vite)"]
     }
   ]

@@ -24,7 +24,7 @@ from sandbox.executor import (
 
 
 app = FastAPI(
-    title="Neurosense AI Integrated Core",
+    title="NeuroLab Integrated Core",
     version="2.2.0",
     docs_url="/docs" if IS_DEV else None,
     redoc_url=None,
@@ -178,7 +178,7 @@ async def route_patient_by_id(
 
 @app.get("/")
 async def root():
-    return {"message": "Neurosense AI Core", "status": "active"}
+    return {"message": "NeuroLab Core", "status": "active"}
 
 
 @app.get("/health")

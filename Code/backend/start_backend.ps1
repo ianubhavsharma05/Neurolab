@@ -1,6 +1,6 @@
-# Neurosense Backend Start Script
+# NeuroLab Backend Start Script
 Write-Host "----------------------------------------------------" -ForegroundColor Cyan
-Write-Host "  Neurosense AI: Backend Inference Core starting..." -ForegroundColor Cyan
+Write-Host "  NeuroLab: Backend Inference Core starting..." -ForegroundColor Cyan
 Write-Host "----------------------------------------------------" -ForegroundColor Cyan
 
 # Ensure we are in the backend directory
@@ -22,5 +22,5 @@ Write-Host "[+] Verifying Python dependencies (this may take a moment)..." -Fore
 pip install -r requirements.txt --quiet
 
 # Start the FastAPI application
-Write-Host "[*] Launching Neurosense Integrated Core at http://localhost:8000" -ForegroundColor Green
+Write-Host "[*] Launching NeuroLab Integrated Core at http://localhost:8000" -ForegroundColor Green
 python main.py

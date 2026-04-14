@@ -4,8 +4,8 @@ import uuid
 import random
 
 def generate_patient_data():
-    root_dir = r"C:\Users\ianub\Documents\Neurosense\Dementia_mri_project\data\mri-data\full_dataset"
-    backend_data_path = r"C:\Users\ianub\Documents\Neurosense\Code\backend\patient_records.json"
+    root_dir = r"C:\Users\ianub\Documents\NeuroLab\Dementia_mri_project\data\mri-data\full_dataset"
+    backend_data_path = r"C:\Users\ianub\Documents\NeuroLab\Code\backend\patient_records.json"
     
     categories = ["MildDemented", "ModerateDemented", "NonDemented", "VeryMildDemented"]
     risk_map = {

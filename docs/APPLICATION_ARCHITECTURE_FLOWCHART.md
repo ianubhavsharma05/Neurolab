@@ -1,4 +1,4 @@
-# NeuroSense AI Architecture Flowchart
+# NeuroLab Architecture Flowchart
 
 ## Current Application Architecture
 

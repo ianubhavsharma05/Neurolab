@@ -19,7 +19,7 @@
                 },
                 "background": {
                     "activeOnStart": true,
-                    "beginsPattern": "Starting Neurosense AI",
+                    "beginsPattern": "Starting NeuroLab",
                     "endsPattern": "Uvicorn running on|Application startup complete"
                 }
             },

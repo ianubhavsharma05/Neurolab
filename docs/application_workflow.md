@@ -1,6 +1,6 @@
-# NeuroSense AI Application Workflow
+# NeuroLab Application Workflow
 
-NeuroSense AI is a multimodal dementia risk assessment application with a React frontend and a FastAPI backend. The app supports English/Hindi UI switching, curved transparent page shells, and longitudinal result tracking in the browser.
+NeuroLab is a multimodal dementia risk assessment application with a React frontend and a FastAPI backend. The app supports English/Hindi UI switching, curved transparent page shells, and longitudinal result tracking in the browser.
 
 ## High-Level Flow
 

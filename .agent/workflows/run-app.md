@@ -1,5 +1,5 @@
 ---
-description: How to run the current NeuroSense AI application manually
+description: How to run the current NeuroLab application manually
 ---
 
 Follow these steps to start the complete diagnostic environment (Backend + Frontend). You can use the automated script or run the commands manually.
@@ -10,7 +10,7 @@ This method handles virtual environments and dependency verification automatical
 
 ### 1. Start the Backend (FastAPI Core)
 Open a PowerShell terminal in:
-`c:\Users\ianub\Documents\Neurosense\Code\backend`
+`c:\Users\ianub\Documents\NeuroLab\Code\backend`
 
 // turbo
 ```powershell
@@ -20,7 +20,7 @@ Open a PowerShell terminal in:
 
 ### 2. Start the Frontend (Vite & React)
 Open a **separate** terminal in:
-`c:\Users\ianub\Documents\Neurosense\Code`
+`c:\Users\ianub\Documents\NeuroLab\Code`
 
 // turbo
 ```powershell
@@ -34,7 +34,7 @@ npm run dev
 Use this if you prefer to run every command individually.
 
 ### 1. Manual Backend Setup
-Navigate to: `c:\Users\ianub\Documents\Neurosense\Code\backend`
+Navigate to: `c:\Users\ianub\Documents\NeuroLab\Code\backend`
 
 1. **Activate Environment**:
 ```powershell
@@ -48,7 +48,7 @@ python main.py
 *The core will be reachable at `http://localhost:8000`.*
 
 ### 2. Manual Frontend Setup
-Navigate to: `c:\Users\ianub\Documents\Neurosense\Code`
+Navigate to: `c:\Users\ianub\Documents\NeuroLab\Code`
 
 1. **Ensure Dependencies**:
 ```powershell
@@ -78,7 +78,7 @@ npm run dev
 
 To generate an optimized, deployment-ready bundle:
 ```powershell
-cd c:\Users\ianub\Documents\Neurosense\Code
+cd c:\Users\ianub\Documents\NeuroLab\Code
 npm run build
 ```
 This produces a minified `dist/` folder ready for CDN or hospital network hosting.

@@ -1,4 +1,4 @@
-# NeuroSense AI Pseudo Code Flowchart
+# NeuroLab Pseudo Code Flowchart
 
 ## End-To-End User Logic
 
