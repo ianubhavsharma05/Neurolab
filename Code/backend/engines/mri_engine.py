@@ -13,9 +13,11 @@ from pytorch_grad_cam import GradCAM
 from torchvision import transforms
 
 from core.config import (
-    DEVICE, MRI_MODEL_PATH, MRI_CLASS_NAMES, MRI_LABEL_MAP,
+    MRI_MODEL_PATH, MRI_CLASS_NAMES, MRI_LABEL_MAP,
     supabase_client, logger,
 )
+
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 torch.set_num_threads(1)
 
