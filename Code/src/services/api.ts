@@ -50,13 +50,17 @@ async function secureFetch<T>(
     throw new Error(errData.detail || `Request failed (HTTP ${response.status})`);
   }
 
-  const rawData = await response.json();
+  const rawResponse = await response.json();
+  
+  if (!rawResponse.success) {
+    throw new Error(rawResponse.error?.message || 'Request failed');
+  }
 
   try {
-    return schema.parse(rawData);
+    return schema.parse(rawResponse.data);
   } catch {
     if (import.meta.env.DEV) {
-      console.error('[API] Response validation failed for endpoint:', endpoint, rawData);
+      console.error('[API] Response validation failed for endpoint:', endpoint, rawResponse.data);
     }
     throw new Error('Invalid response received from server. Please try again.');
   }
@@ -89,8 +93,8 @@ export const uploadMRI = async (file: File): Promise<MRIResponse> => {
 };
 
 export const uploadSpeech = async (audioBlob: Blob): Promise<SpeechResponse> => {
-  if (audioBlob.size > 10 * 1024 * 1024) {
-    throw new Error('Audio file too large. Maximum size is 10MB.');
+  if (audioBlob.size > 50 * 1024 * 1024) {
+    throw new Error('Audio file too large. Maximum size is 50MB.');
   }
 
   const formData = new FormData();
@@ -138,7 +142,8 @@ export const fetchPatients = async (limit = 10, skip = 0, search = '') => {
     const response = await fetch(url.toString(), { headers });
     if (!response.ok) throw new Error('Failed to fetch patient records');
     const raw = await response.json();
-    return patientsListResponseSchema.parse(raw);
+    if (!raw.success) throw new Error(raw.error?.message || 'Failed to fetch patients');
+    return patientsListResponseSchema.parse(raw.data);
   } catch {
     const syntheticDB = Array.from({ length: 6395 }, (_, i) => {
       const idStr = (i + 1).toString().padStart(4, '0');

@@ -81,6 +81,6 @@ except Exception as e:
     logger.error(f"Patient DB load failed: {e}")
 
 MAX_MRI_SIZE_BYTES = 20 * 1024 * 1024
-MAX_AUDIO_SIZE_BYTES = 10 * 1024 * 1024
+MAX_AUDIO_SIZE_BYTES = 50 * 1024 * 1024
 MAX_SEARCH_LENGTH = 100
 MAX_RESULTS_PER_PAGE = 100
