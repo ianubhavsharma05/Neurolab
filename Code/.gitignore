@@ -41,8 +41,8 @@ __pycache__/
 *$py.class
 backend/.venv/
 backend/venv/
-backend/models/*.pth
-backend/models/*.pkl
+# backend/models/*.pth
+# backend/models/*.pkl
 
 # Audio/Temp files
 *.wav

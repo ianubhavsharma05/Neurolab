@@ -1,2 +1,0 @@
-200
-{"id":"3f810cff-91a3-447d-b11c-3e9f0f7a96bb","precisionScore":99.48840737342834,"accuracy":99.48840737342834,"modelAccuracy":85.4,"classification":"Low","heatmapData":[{"x":0,"y":0,"value":0.0},{"x":0
